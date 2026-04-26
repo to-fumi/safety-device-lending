@@ -292,7 +292,100 @@
 </head>
 <body>
 <div class="layout">
-	
+	<header>
+		<div class="logo" onclick="showTab('management')">
+			<div class="logo-icon">
+				<svg viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="5" height="5" rx="1.2" fill="currentColor"/><rect x="7" y="1" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.5"/><rect x="1" y="7" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.5"/><rect x="7" y="7" width="5" height="5" rx="1.2" fill="currentColor"/></svg>
+			</div>
+			安全端末管理
+		</div>
+		<div class="sep"></div>
+		<div class="header-controls">
+			<div class="header-stat"><div class="dot-live"></div><span id="live-count">-</span>&nbsp;台 貸出中</div>
+			<button class="admin-btn" onclick="toggleAdminMenu()" title="管理者向けメニュー">
+				<svg viewBox="0 0 16 16" fill="none"><rect x="4" y="7" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M6 7V4a2 2 0 0 1 4 0v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="8" cy="10.5" r="0.8" stroke="currentColor" stroke-width="1.2"/></svg>
+			</button>
+		</div>
+	</header>
+
+	<aside></aside>
+
+	<main id="main-content"></main>
 </div>
+
+<div class="admin-overlay" id="admin-overlay">
+	<div class="admin-modal">
+		<div class="admin-modal-header">
+			<div class="admin-modal-title">管理者認証</div>
+		</div>
+		<div class="admin-modal-body">
+			<div class="admin-field">
+				<label>パスワード</label>
+				<input type="password" id="admin-password" placeholder="管理者パスワードを入力" onkeypress="if(event.key==='Enter')submitAdminAuth()">
+				<div class="admin-error" id="admin-error"></div>
+			</div>
+		</div>
+		<div class="admin-modal-footer">
+			<button class="btn-cancel" onclick="closeAdminAuth()">キャンセル</button>
+			<button class="btn-primary" onclick="submitAdminAuth()">認証</button>
+		</div>
+	</div>
+</div>
+
+<div class="admin-menu" id="admin-menu">
+	<button class="admin-menu-item" onclick="showTab('dashboard')">
+		<svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/></svg>
+		ダッシュボード
+	</button>
+	<button class="admin-menu-item" onclick="showTab('log')">
+		<svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+		ログ一覧
+	</button>
+	<button class="admin-menu-item" onclick="showTab('devices')">
+		<svg viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5 13v1M11 13v1M4 14h8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+		端末管理
+	</button>
+	<button class="admin-menu-item" onclick="logoutAdmin()">
+		<svg viewBox="0 0 16 16" fill="none"><path d="M10 10l3 3m0-3l-3 3M11 2H5a2 2 0 00-2 2v8a2 2 0 002 2h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+		ログアウト
+	</button>
+</div>
+</div>
+
+<div class="cam-overlay" id="cam-overlay">
+	<div class="cam-modal">
+		<div class="cam-header">
+			<div class="cam-title">
+				<div class="cam-dot" id="cam-dot"></div>
+				QR / バーコード読み取り
+			</div>
+			<button class="btn-close" onclick="closeCamera()">
+				<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+			</button>
+		</div>
+		<div class="cam-body">
+			<video id="cam-video" autoplay playsinline muted></video>
+			<div class="cam-guide">
+				<div class="cam-guide-box">
+					<div class="cam-corner tl"></div>
+					<div class="cam-corner tr"></div>
+					<div class="cam-corner bl"></div>
+					<div class="cam-corner br"></div>
+					<div class="cam-scan-line"></div>
+				</div>
+			</div>
+		</div>
+		<div class="cam-footer">
+			<div class="cam-status" id="cam-status">カメラを起動しています...</div>
+		</div>
+	</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="libs/zxing-browser.min.js"></script>
+<script>
+	
+</script>
 </body>
 </html>
