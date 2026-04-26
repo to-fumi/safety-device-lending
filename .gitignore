@@ -225,3 +225,4 @@ __marimo__/
 *.db
 db/init.sql
 db/sqlite3.exe
+db/sqlite3
