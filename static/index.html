@@ -1,391 +1,3825 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>安全端末管理</title>
-<style>
-	@import url('fonts/google-fonts.css');
-	:root {
-		--bg: #0e0f11; --surface: #16181c; --surface2: #1e2026; --border: #2a3d35; --border2: #363a45;
-		--accent: #4ade80; --accent-dim: rgba(74,222,128,0.12); --accent-dim2: rgba(74,222,128,0.06);
-		--warn: #fb923c; --warn-dim: rgba(251,146,60,0.12);
-		--danger: #f87171; --danger-dim: rgba(248,113,113,0.12);
-		--text: #e8eaf0; --text-muted: #6b7280; --text-dim: 39ca3af;
-		--mono: 'DM Mono', monospace; --sans: 'Noto Sans JP', sans-serif; --radius: 10px;
-	}
-	* { box-sizing: border-box; margin: 0; padding: 0; }
-	body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 16px; min-height: 100vh; }
-	body::before {
-		content: ''; position: fixed; inset: 0;
-		background-image: repeating-linear-gradient(0deg,transparent,transparent 39px,var(--border) 39px,var(--border) 40px),
-											repeating-linear-gradient(90deg,transparent,transparent 39px,var(--border) 39px,var(--border) 40px);
-		opacity: 0.18; pointer-events: none; z-index: 0;
-	}
-	.layout { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr; grid-template-rows: 56px 1fr; min-height: 100vh; }
-	header { grid-column: 1/-1; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 24px; gap: 16px; }
-	.logo { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--accent); letter-spacing: .08em; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: opacity .15s; }
-	.logo:hover { opacity: 0.8; }
-	.logo-icon { width: 22px; height: 22px; background: var(--accent-dim); border: 1px solid var(--accent); border-radius: 5px; display: flex; align-items: center; justify-content: center; }
-	.logo-icon svg { width: 13px; height: 13px; }
-	header .sep { flex: 1; }
-	.header-controls { display: flex; align-items: center; gap: 12px; }
-	.admin-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 6px; transition: all .15s; }
-	.admin-btn:hover { background: var(--surface2); color: var(--accent); }
-	.admin-btn svg { width: 18px; height: 18px; }
-	.header-stat { font-family: var(--mono); font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
-	.dot-live { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2s ease-in-out infinite; }
-	@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-	aside { display: none; }
-	.nav-section { padding: 0 16px; margin-bottom: 8px; }
-	.nav-label { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; color: var(--text-muted); text-transform: uppercase; padding: 0 8px; margin-bottom: 6px; }
-	.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; cursor: pointer; color: var(--text-muted); font-size: 15px; transition: all .15s; border: 1px solid transparent; }
-	.nav-item:hover { background: var(--surface2); color: var(--text-dim); }
-	.nav-item.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(74,222,128,.2); }
-	.nav-item svg { width: 15px; height: 15px; flex-shrink: 0; }
-	main { padding: 28px; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; }
-	.page-header { display: flex; align-items: flex-end; justify-content: space-between; }
-	.page-title { font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
-	.page-sub { font-size: 14px; color: var(--text-muted); margin-top: 4px; font-family: var(--mono); }
-	.stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
-	.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; position: relative; overflow: hidden; }
-	.stat-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; border-radius: 2px 2px 0 0; }
-	.stat-card.green::after { background: var(--accent); }
-	.stat-card.orange::after { background: var(--warn); }
-	.stat-card.blue::after { background: #60a5fa; }
-	.stat-card.purple::after { background: #a78bfa; }
-	.stat-label { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; color: var(--text-dim); text-transform: uppercase; margin-bottom: 10px; }
-	.stat-value { font-family: var(--mono); font-size: 36px; font-weight: 500; line-height: 1; }
-	.stat-value .stat-denominator { font-size: 20px; color: var(--text-muted); margin-left: 4px; vertical-align: baseline; }
-	.stat-card.green .stat-value { color: var(--accent); }
-	.stat-card.orange .stat-value { color: var(--warn); }
-	.stat-card.blue .stat-value { color: #60a5fa; }
-	.stat-card.purple .stat-value { color: #a78bfa; }
-	.stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
-	.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-	.panel-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
-	.panel-title { font-family: var(--mono); font-size: 14px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--text); }
-	.panel-badge { display:inline-flex; align-items:center; padding:2px 8px; background:var(--accent-dim); color:var(--accent); border-radius:4px; font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:.04em; flex-shrink:0; }
-	.panel-header .sep { flex: 1; }
-	.form-grid { display: grid; gap: 10px; padding: 16px 20px; align-items: end; }
-	.form-grid.cols-6 { grid-template-columns: 1fr 1fr 1fr 1fr 1fr auto; }
-	.form-grid.cols-5 { grid-template-columns: 1fr 1fr 1fr 1fr auto; }
-	.form-grid.cols-4 { grid-template-columns: 1fr 1fr 1fr auto; }
-	.form-grid.cols-3 { grid-template-columns: 1fr 1fr auto; }
-	.form-grid.cols-2 { grid-template-columns: 1fr auto; }
-	.field label { display: block; font-family: var(--mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
-	.field input, .field select { width: 100%; background: var(--bg); border: 1px solid var(--border2); border-radius: 7px; padding: 10px 12px; color: var(--text); font-family: var(--sans); font-size: 15px; outline: none; transition: border-color .15s; }
-	.field input:focus, .field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
-	.field select option { background: var(--surface); }
-	.field-help { margin-top: 6px; font-size: 12px; color: var(--text-muted); line-height: 1.4; }
-	.field-help.ok { color: var(--accent); }
-	.field-help.warn { color: var(--warn); }
-	.guide-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; display: flex; align-items: center; gap: 12px; margin-bottom: 8px; min-height: 64px; }
-	.guide-step { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-dim); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; animation: pulse 1.3s ease-in-out infinite; }
-	.guide-text { font-size: 17px; color: var(--text-dim); line-height: 1.55; font-weight: 500; }
-	.device-scan-field { display: flex; gap: 6px; align-items: stretch; }
-	.device-detected {
-		flex: 1; min-width: 0;
-		background: var(--bg); border: 1px solid var(--border2); border-radius: 7px;
-		padding: 10px 12px; height: 42px;
-		font-family: var(--mono); font-size: 14px;
-		color: var(--text-muted);
-		display: flex; align-items: center;
-		overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
-		transition: border-color .2s, color .2s;
-	}
-	.device-detected.found { color: var(--accept); border-color: rgba(74,222,128,.4); background: var(--accent-dim); }
-	.device-detected.miss { color: var(--danger); border-color: rgba(248,113,113,.4); background: var(--danger-dim); }
-	.btn-camera { background: var(--accent); color: #0a1a0a; border: none; border-radius: 7px; padding: 0 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 13px; font-weight: 500; white-space: nowrap; transition: all .15s; flex-shrink: 0; height: 42px; }
-	.btn-camera:hover { background: #86efac; transform: translate(-1px); }
-	.btn-camera:disabled { opacity: .4; cursor: not-allowd; pointer-events: none; }
-	.btn-camera svg { width: 14px; height: 14px; }
-	.btn-primary { background: var(--accent); color: #0a1a0a; border: none; border-radius: 7px; padding: 10px 20px; font-family: var(--mono); font-size: 14px; font-weight: 500; letter-spacing: .03em; cursor: pointer; white-space: nowrap; transition: all .15s; display: flex; align-items: center; gap: 6px; height: 42px; }
-	.btn-primary:hover { background: #86efac; transform: translateY(-1px); }
-	.btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-	.btn-secondary { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border2); border-radius: 7px; padding: 0 14px; font-family: var(--mono); font-size: 13px; font-weight: 500; letter-spacing: .03em; cursor: pointer; white-space: nowrap; transition: all .15s; display: inline-flex; align-items: center; justify-content: center; height: 42px; }
-	.btn-secondary:hover { background: var(--accent-dim); color: var(--accent); border-color: rgba(74,222,128,.3); }
-	.btn-secondary:disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
-	.ret-type-segment { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-	.ret-type-btn { height: 38px; padding: 8px 20px; border: 1px solid var(--border2); border-radius: 7px; background: var(--bg); color: var(--text-dim); font-family: var(--mono); font-size: 13px; cursor: pointer; transition: all .15s; }
-	.ret-type-btn:hover { border-color: rgba(74,222,128,.35); color: var(--text); }
-	.ret-type-btn:active { background: var(--accent-dim); color: var(--accent); border-color: rgba(74,222,128,35); }
-	.ret-type-btn:disabled { opacity: .45; cursor: not-allowed; }
-	@media (max-width: 900px) {
-		.ret-type-segment { grid-template-columns: 1fr; }
-	}
-	.ret-summary { font-size: 13px; color: var(--text-dim); background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 8px 10px; }
-	.ret-maint-note { font-size: 13px; color: var(--warn); background: var(--warn-dim); border: 1px solid rgba(251,146,60,.35); border-radius: 7px; padding: 8px 10px; display: none; }
-	.btn-danger { background: var(--danger-dim); color: var(--danger); border: 1px solid rgba(248,113,113,.3); border-radius: 7px; padding: 8px 12px; font-family: var(--mono); font-size: 13px; cursor: pointer; transition: all .15s; }
-	.btn-danger:hover { background: rgba(248,113,113,.2); }
-	.btn-danger:disabled { opacity: .4; cursor: not-allowed; }
-	.table-wrap { overflow-x: auto; }
-	table { width: 100%; border-collapse: collapse; font-size: 15px; }
-	thead tr { background: var(--surface2); }
-	th { text-align: left; padding: 12px 16px; font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); white-space: nowrap; font-weight: 500; }
-	td { padding: 14px 16px; border-bottom: 1px solid var(--border); color: var(--text-dim); vertical-align: middle; }
-	tbody tr:hover td { background: var(---accent-dim2); }
-	tbody tr:last-child td { border-bottom: none; }
-	.device-id { font-family: var(--mono); font-size: 14px; color: var(--text); background: var(--surface2); padding: 4px 9px; border-radius: 5px; border: 1px solid var(--border2); }
-	.status-pill { font-family: var(--mono); font-size: 13px; padding: 4px 11px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
-	.status-pill::before { content: ''; width: 5px; height: 5px; border-radius: 50%; }
-	.status-lending { background: var(--warn-dim); color: var(--warn); border: 1px solid rgba(251,146,60,.25); }
-	.status-lending::before { background: var(--warn); }
-	.status-returned { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(74,222,128,.2); }
-	.status-returned::before { background: var(--accent); }
-	.status-avail { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(74,222,128,.2); }
-	.status-avail::before { background: var(--accent); }
-	.status-broken { background: var(--danger-dim); color: var(--danger); border: 1px solid rgba(248,113,113,.3); }
-	.status-broken::before { background: var(--danger); }
-	.status-retired { background: rgba(156,163,175,.18); color: #d1d5db; border: 1px solid rgba(156,163,175,.35); }
-	.status-retired::before { background: #d1d5db; }
-	.time-cell { font-family: var(--mono); font-size: 13px; color: var(--text-muted); }
-	.filter-bar { display: flex; gap: 8px; align-items: center; }
-	.filter-input { background: var(--bg); border: 1px solid var(--border2); border-radius: 7px; padding: 8px 12px; color: var(--text); font-family: var(--sans); font-size: 14px; outline: none; width: 220px; transition: border-color .15s; }
-	.filter-input:focus { border-color: var(--accent); }
-	.filter-select { background: var(--bg); border: 1px solid var(--border2); border-radius: 7px; padding: 8px 12px; color: var(--text); font-family: var(--mono); font-size: 13px; outline: none; cursor: pointer; }
-	.error-msg { color: #f87171; font-family: var(--mono); font-size: 14px; padding: 10px 20px; }
-	.empty { padding: 48px; text-align: center; color: var(--text-muted); font-family: var(--mono); font-size: 14px; }
-	.toast { position: fixed; bottom: 28px; right: 28px; background: var(--surface2); border: 1px solid var(--accent); border-radius: 10px; padding: 14px 18px; font-family: var(--mono); font-size: 14px; color: var(--accent); display: flex; align-items: center; gap: 10px; z-index: 100; transform: translateY(80px); opacity: 0; transition: all .3s cubic-bezier(.22,1,.36,1); box-shadow: 0 8px 32px rgba(0,0,0,.5); }
-	.toast.show { transform: translateY(0); opacity: 1; }
-	.toast.error { border-color: #f87171; color: #f87171; }
-	.mgmt-top-row { display: grid; grid-template-columns: auto 1fr; gap: 12px; margin-bottom: 8px; align-items: stretch; }
-	.mgmt-employee-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; display: flex; align-items: flex-end; gap: 12px; width: fit-content; }
-	.mgmt-employee-section .field { display: flex; flex-direction: column; gap: 4px; flex: 0 0 auto; }
-	.mgmt-employee-section .field label { font-size: 11px; }
-	.mgmt-employee-section .field input { font-size: 14px; padding: 8px 10px; height: 38px; width: 230px; }
-	.mgmt-stats-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; min-width: 0; }
-	.mgmt-stats-title { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
-	.mgmt-stats-section .stats-row { grid-template-columns: repeat(4, minmax(120px, 1fr)); }
-	.mgmt-stats-section .stat-card { padding: 12px 14px; }
-	.mgmt-stats-section .stat-label { margin-bottom: 6px; font-size: 11px; }
-	.mgmt-stats-section .stat-value { font-size: 24px; }
-	.mgmt-stats-section .stat-value .stat-denominator { font-size: 16px; }
-	.mgmt-container { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-	@media (max-width: 1200px) {
-		.mgmt-container { grid-template-columns: 1fr; }
-		.mgmt-top-row { grid-template-columns: 1fr; }
-		.mgmt-employee-section { width: 100%; flex-direction: column; align-items: stretch; }
-		.mgmt-employee-section .field input { width: 100%; }
-	}
-	@media (max-width: 900px) {
-		.mgmt-stats-section .stats-row { grid-template-columns: repeat(2, 1fr); }
-	}
-	.mgmt-lend-container, .mgmt-return-container { display: flex; flex-direction: column; gap: 16px; }
-	.mgmt-new-lend-form { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-	.mgmt-new-lend-form .panel-header { border-bottom: 1px solid var(--border); }
-	.mgmt-new-lend-form .form-grid { padding: 10px 12px; gap: 8px; grid-template-columns: 1fr auto !important; align-items: start; }
-	.mgmt-new-lend-form .btn-primary { padding: 0 14px !important; height: 42px !important; font-size: 13px !important; }
-	.mgmt-new-lend-form #mgmt-device-help { white-space: nowrap; }
-	@media (max-width: 900px) { .mgmt-new-lend-form #mgmt-device-help { white-space: normal; } }
-	.mgmt-lend-actions { align-self: start; margin-top: 23px; display: flex; gap: 8px; align-items: center; }
-	.mgmt-lend-rescan.hidden { display: none; }
-	.existing-loans-list { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-	.existing-loans-list-header {
-		padding: 8px 12px;
-		border-bottom: 1px solid var(--border);
-		display: grid;
-		grid-template-columns: 0.7fr 1.2fr 1fr 1fr 1fr;
-		gap: 8px;
-		font-size: 12px;
-		font-family: var(--mono);
-		color: var(--text-dim);
-		text-transform: uppercase;
-		letter-spacing: .08em;
-		align-items: center;
-		width: 100%;
-	}
-	.existing-loans-list-item {
-		padding: 12px 12px;
-		border-bottom: 1px solid var(--border);
-		display: grid;
-		grid-template-columns: 0.7fr 1.2fr 1fr 1fr 1fr;
-		gap: 8px;
-		align-items: center;
-		font-size: 14px;
-		width: 100%;
-	}
-	.existing-loans-list-item:last-child { border-bottom: none; }
-	.existing-loans-list-item:hover { background: var(--surface2); }
-	.existing-loans-list-header > div:nth-child(2),
-	.existing-loans-list-header > div:nth-child(3),
-	.existing-loans-list-header > div:nth-child(4),
-	.existing-loans-list-header > div:nth-child(5) { text-align: center; }
-	.existing-loans-list-item > :nth-child(2),
-	.existing-loans-list-item > :nth-child(3),
-	.existing-loans-list-item > :nth-child(4),
-	.existing-loans-list-item > :nth-child(5) { justify-self: center; text-align: center; }
-	.existing-loans-item-code { color: var(--text); background: var(--surface2); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border2); font-family: var(--mono); font-size: 14px; min-height: 34px; display: inline-flex; align-items: center; }
-	.part-badge { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 6px; font-size: 14px; font-weight: 500; font-family: var(--mono); white-space: nowrap; min-height: 34px; }
-	.part-badge.out { background: var(--warn--dim); color: var(--warn); border: 1px solid rgba(251,146,60,.35); }
-	.part-badge.back { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(74,222,128,.35); }
-	.btn-relend {
-		background: var(--accent);
-		color: #0a1a0a;
-		border: none;
-		border-radius: 7px;
-		padding: 6px 12px;
-		height: auto;
-		font-family: var(--mono);
-		font-size: 14px;
-		font-weight: 500;
-		letter-spacing: .04em;
-		cursor: pointer;
-		white-space: nowrap;
-		transition: all .15s;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		min-height: 34px;
-	}
-	.btn-relend:hover { background: #86efac; transform: translateY(-1px); }
-	.btn-relend:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-	.existing-loans-empty { padding: 24px; text-align: center; color: var(--text-muted); font-size: 14px; }
-	.cam-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.72); z-index: 200; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); opacity: 0; pointer-events: none; transition: opacity .2s; }
-	.cam-overlay.open { opacity: 1; pointer-events: all; }
-	.cam-modal { background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; width: 480px; max-width: 96vw; overflow: hidden; box-shadow: 0 24px 64px rgba(0,0,0,.6); }
-	.cam-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-	.cam-title { font-family: var(--mono); font-size: 14px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); display: flex; align-items: center; gap: 8px; }
-	.cam-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); }
-	.cam-dot.active { background: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
-	.btn-close { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; display: flex; border-radius: 5px; transition: all .15s; }
-	.btn-close:hover { background: var(--surface2); color: var(--text); }
-	.cam-body { position: relative; background: #000; aspect-ratio: 4/3; overflow: hidden; }
-	.cam-body video { width: 100%; height: 100%; object-fit: cover; display: block; }
-	.cam-guide { position: absolute; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
-	.cam-guide-box { width: 200px; height: 200px; position: relative; }
-	.cam-corner { position: absolute; width: 24px; height: 24px; border-color: var(--accent); border-style: solid; opacity: .9; }
-	.cam-corner.tl { top: 0; left: 0; border-width: 3px 0 0 3px; border-radius: 3px 0 0 0; }
-	.cam-corner.tr { top: 0; right: 0; border-width: 3px 3px 0 0; border-radius: 0 3px 0 0; }
-	.cam-corner.bl { bottom: 0; left: 0; border-width: 0 0 3px 3px; border-radius: 0 0 0 3px; }
-	.cam-corner.br { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-radius: 0 0 3px 0; }
-	.cam-scan-line { position: absolute; left: 4px; right: 4px; height: 2px; background: linear-gradient(90deg,transparent,var(--accent),transparent); animation: scanline 2s ease-in-out infinite; }
-	@keyframes scanline { 0%{top:8%} 50%{top:90%} 100%{top:8%} }
-	.cam-footer { padding: 12px 18px; border-top: 1px solid var(--border); }
-	.cam-status { font-family: var(--mono); font-size: 13px; color: var(--text-muted); }
-	.cam-status.found { color: var(--accent); }
-	.cam-status.err { color: var(--danger); }
-	::-webkit-scrollbar { width: 6px; height: 6px; }
-	::-webkit-scrollbar-track { background: transparent; }
-	::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-	.admin-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.72); z-index: 200; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); opacity: 0; pointer-events: none; transition: opacity .2s; }
-	.admin-overlay.open { opacity: 1; pointer-events: all; }
-	.admin-modal { background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; width: 400px; max-width: 96vw; overflow: hidden; box-shadow: 0 24px 64px rgba(0,0,0,.6); }
-	.admin-modal-header { padding: 18px 20px; border-bottom: 1px solid var(--border); }
-	.admin-modal-title { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: .04em; }
-	.admin-modal-body { padding: 20px }
-	.admin-field { margin-bottom: 16px; }
-	.admin-field label { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
-	.admin-field input { width: 100%; background: var(--bg); border: 1px solid var(--border2); border-radius: 7px; padding: 10px 12px; color: var(--text); font-family: var(--sans); font-size: 14px; outline: none; transition: border-color .15s; }
-	.admin-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
-	.admin-error { color: #f87171; font-family: var(--mono); font-size: 11px; margin-top: 6px; }
-	.admin-modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
-	.btn-cancel { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); border-radius: 7px; padding: 8px 16px; font-family: var(--mono); font-size: 12px; cursor: pointer; transition: all .15s; }
-	.btn-cancel:hover { background: var(--border); }
-	.admin-menu { position: fixed; top: 56px; right: 0; width: 240px; background: var(--surface); border: 1px solid var(--border); border-top: none; border-right: none; border-radius: 0 0 0 10px; box-shadow: -4px 4px 12px rgba(0,0,0,.3); z-index: 199; transform: translateX(100%); transition: transform .2s; }
-  .admin-menu.open { transform: translateX(0); }
-	.admin-menu-item { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; color: var(--text-muted); font-size: 13px; border-bottom: 1px solid var(--border); transition: all .15s; border: none; background: none; width: 100%; text-align: left; }
-	.admin-menu-item:hover { background: var(--surface2); color: var(--text); }
-	.admin-menu-item svg { width: 16px; height: 16px; flex-shrink: 0; }
-	.admin-menu-item:last-child { border-bottom: none; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>安全端末管理</title>
+  <style>
+    @import url('fonts/google-fonts.css');
+
+    :root {
+      --bg: #0e0f11;
+      --surface: #16181c;
+      --surface2: #1e2026;
+      --border: #2a3d35;
+      --border2: #363a45;
+      --accent: #4ade80;
+      --accent-dim: rgba(74, 222, 128, 0.12);
+      --accent-dim2: rgba(74, 222, 128, 0.06);
+      --warn: #fb923c;
+      --warn-dim: rgba(251, 146, 60, 0.12);
+      --danger: #f87171;
+      --danger-dim: rgba(248, 113, 113, 0.12);
+      --text: #e8eaf0;
+      --text-muted: #6b7280;
+      --text-dim: 39ca3af;
+      --mono: 'DM Mono', monospace;
+      --sans: 'Noto Sans JP', sans-serif;
+      --radius: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 16px;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: repeating-linear-gradient(0deg, transparent, transparent 39px, var(--border) 39px, var(--border) 40px),
+        repeating-linear-gradient(90deg, transparent, transparent 39px, var(--border) 39px, var(--border) 40px);
+      opacity: 0.18;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .layout {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr;
+      grid-template-rows: 56px 1fr;
+      min-height: 100vh;
+    }
+
+    header {
+      grid-column: 1/-1;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 16px;
+    }
+
+    .logo {
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--accent);
+      letter-spacing: .08em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+
+    .logo:hover {
+      opacity: 0.8;
+    }
+
+    .logo-icon {
+      width: 22px;
+      height: 22px;
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-icon svg {
+      width: 13px;
+      height: 13px;
+    }
+
+    header .sep {
+      flex: 1;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .admin-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      transition: all .15s;
+    }
+
+    .admin-btn:hover {
+      background: var(--surface2);
+      color: var(--accent);
+    }
+
+    .admin-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .header-stat {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot-live {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .4
+      }
+    }
+
+    aside {
+      display: none;
+    }
+
+    .nav-section {
+      padding: 0 16px;
+      margin-bottom: 8px;
+    }
+
+    .nav-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .12em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      padding: 0 8px;
+      margin-bottom: 6px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 15px;
+      transition: all .15s;
+      border: 1px solid transparent;
+    }
+
+    .nav-item:hover {
+      background: var(--surface2);
+      color: var(--text-dim);
+    }
+
+    .nav-item.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-color: rgba(74, 222, 128, .2);
+    }
+
+    .nav-item svg {
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+    }
+
+    main {
+      padding: 28px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+    }
+
+    .page-title {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -.02em;
+    }
+
+    .page-sub {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-family: var(--mono);
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      border-radius: 2px 2px 0 0;
+    }
+
+    .stat-card.green::after {
+      background: var(--accent);
+    }
+
+    .stat-card.orange::after {
+      background: var(--warn);
+    }
+
+    .stat-card.blue::after {
+      background: #60a5fa;
+    }
+
+    .stat-card.purple::after {
+      background: #a78bfa;
+    }
+
+    .stat-label {
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .08em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .stat-value {
+      font-family: var(--mono);
+      font-size: 36px;
+      font-weight: 500;
+      line-height: 1;
+    }
+
+    .stat-value .stat-denominator {
+      font-size: 20px;
+      color: var(--text-muted);
+      margin-left: 4px;
+      vertical-align: baseline;
+    }
+
+    .stat-card.green .stat-value {
+      color: var(--accent);
+    }
+
+    .stat-card.orange .stat-value {
+      color: var(--warn);
+    }
+
+    .stat-card.blue .stat-value {
+      color: #60a5fa;
+    }
+
+    .stat-card.purple .stat-value {
+      color: #a78bfa;
+    }
+
+    .stat-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .panel-title {
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .panel-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .04em;
+      flex-shrink: 0;
+    }
+
+    .panel-header .sep {
+      flex: 1;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 10px;
+      padding: 16px 20px;
+      align-items: end;
+    }
+
+    .form-grid.cols-6 {
+      grid-template-columns: 1fr 1fr 1fr 1fr 1fr auto;
+    }
+
+    .form-grid.cols-5 {
+      grid-template-columns: 1fr 1fr 1fr 1fr auto;
+    }
+
+    .form-grid.cols-4 {
+      grid-template-columns: 1fr 1fr 1fr auto;
+    }
+
+    .form-grid.cols-3 {
+      grid-template-columns: 1fr 1fr auto;
+    }
+
+    .form-grid.cols-2 {
+      grid-template-columns: 1fr auto;
+    }
+
+    .field label {
+      display: block;
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border2);
+      border-radius: 7px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      outline: none;
+      transition: border-color .15s;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+
+    .field select option {
+      background: var(--surface);
+    }
+
+    .field-help {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .field-help.ok {
+      color: var(--accent);
+    }
+
+    .field-help.warn {
+      color: var(--warn);
+    }
+
+    .guide-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+      min-height: 64px;
+    }
+
+    .guide-step {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-dim);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      animation: pulse 1.3s ease-in-out infinite;
+    }
+
+    .guide-text {
+      font-size: 17px;
+      color: var(--text-dim);
+      line-height: 1.55;
+      font-weight: 500;
+    }
+
+    .device-scan-field {
+      display: flex;
+      gap: 6px;
+      align-items: stretch;
+    }
+
+    .device-detected {
+      flex: 1;
+      min-width: 0;
+      background: var(--bg);
+      border: 1px solid var(--border2);
+      border-radius: 7px;
+      padding: 10px 12px;
+      height: 42px;
+      font-family: var(--mono);
+      font-size: 14px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      transition: border-color .2s, color .2s;
+    }
+
+    .device-detected.found {
+      color: var(--accept);
+      border-color: rgba(74, 222, 128, .4);
+      background: var(--accent-dim);
+    }
+
+    .device-detected.miss {
+      color: var(--danger);
+      border-color: rgba(248, 113, 113, .4);
+      background: var(--danger-dim);
+    }
+
+    .btn-camera {
+      background: var(--accent);
+      color: #0a1a0a;
+      border: none;
+      border-radius: 7px;
+      padding: 0 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: all .15s;
+      flex-shrink: 0;
+      height: 42px;
+    }
+
+    .btn-camera:hover {
+      background: #86efac;
+      transform: translate(-1px);
+    }
+
+    .btn-camera:disabled {
+      opacity: .4;
+      cursor: not-allowd;
+      pointer-events: none;
+    }
+
+    .btn-camera svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0a1a0a;
+      border: none;
+      border-radius: 7px;
+      padding: 10px 20px;
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: .03em;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all .15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      height: 42px;
+    }
+
+    .btn-primary:hover {
+      background: #86efac;
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text-dim);
+      border: 1px solid var(--border2);
+      border-radius: 7px;
+      padding: 0 14px;
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: .03em;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all .15s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 42px;
+    }
+
+    .btn-secondary:hover {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-color: rgba(74, 222, 128, .3);
+    }
+
+    .btn-secondary:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .ret-type-segment {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .ret-type-btn {
+      height: 38px;
+      padding: 8px 20px;
+      border: 1px solid var(--border2);
+      border-radius: 7px;
+      background: var(--bg);
+      color: var(--text-dim);
+      font-family: var(--mono);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .ret-type-btn:hover {
+      border-color: rgba(74, 222, 128, .35);
+      color: var(--text);
+    }
+
+    .ret-type-btn:active {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-color: rgba(74, 222, 128, 35);
+    }
+
+    .ret-type-btn:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 900px) {
+      .ret-type-segment {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .ret-summary {
+      font-size: 13px;
+      color: var(--text-dim);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 8px 10px;
+    }
+
+    .ret-maint-note {
+      font-size: 13px;
+      color: var(--warn);
+      background: var(--warn-dim);
+      border: 1px solid rgba(251, 146, 60, .35);
+      border-radius: 7px;
+      padding: 8px 10px;
+      display: none;
+    }
+
+    .btn-danger {
+      background: var(--danger-dim);
+      color: var(--danger);
+      border: 1px solid rgba(248, 113, 113, .3);
+      border-radius: 7px;
+      padding: 8px 12px;
+      font-family: var(--mono);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .btn-danger:hover {
+      background: rgba(248, 113, 113, .2);
+    }
+
+    .btn-danger:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 15px;
+    }
+
+    thead tr {
+      background: var(--surface2);
+    }
+
+    th {
+      text-align: left;
+      padding: 12px 16px;
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      white-space: nowrap;
+      font-weight: 500;
+    }
+
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-dim);
+      vertical-align: middle;
+    }
+
+    tbody tr:hover td {
+      background: var(---accent-dim2);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .device-id {
+      font-family: var(--mono);
+      font-size: 14px;
+      color: var(--text);
+      background: var(--surface2);
+      padding: 4px 9px;
+      border-radius: 5px;
+      border: 1px solid var(--border2);
+    }
+
+    .status-pill {
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 4px 11px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+
+    .status-pill::before {
+      content: '';
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+    }
+
+    .status-lending {
+      background: var(--warn-dim);
+      color: var(--warn);
+      border: 1px solid rgba(251, 146, 60, .25);
+    }
+
+    .status-lending::before {
+      background: var(--warn);
+    }
+
+    .status-returned {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid rgba(74, 222, 128, .2);
+    }
+
+    .status-returned::before {
+      background: var(--accent);
+    }
+
+    .status-avail {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid rgba(74, 222, 128, .2);
+    }
+
+    .status-avail::before {
+      background: var(--accent);
+    }
+
+    .status-broken {
+      background: var(--danger-dim);
+      color: var(--danger);
+      border: 1px solid rgba(248, 113, 113, .3);
+    }
+
+    .status-broken::before {
+      background: var(--danger);
+    }
+
+    .status-retired {
+      background: rgba(156, 163, 175, .18);
+      color: #d1d5db;
+      border: 1px solid rgba(156, 163, 175, .35);
+    }
+
+    .status-retired::before {
+      background: #d1d5db;
+    }
+
+    .time-cell {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .filter-input {
+      background: var(--bg);
+      border: 1px solid var(--border2);
+      border-radius: 7px;
+      padding: 8px 12px;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      outline: none;
+      width: 220px;
+      transition: border-color .15s;
+    }
+
+    .filter-input:focus {
+      border-color: var(--accent);
+    }
+
+    .filter-select {
+      background: var(--bg);
+      border: 1px solid var(--border2);
+      border-radius: 7px;
+      padding: 8px 12px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .error-msg {
+      color: #f87171;
+      font-family: var(--mono);
+      font-size: 14px;
+      padding: 10px 20px;
+    }
+
+    .empty {
+      padding: 48px;
+      text-align: center;
+      color: var(--text-muted);
+      font-family: var(--mono);
+      font-size: 14px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: var(--surface2);
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-family: var(--mono);
+      font-size: 14px;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 100;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all .3s cubic-bezier(.22, 1, .36, 1);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, .5);
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .toast.error {
+      border-color: #f87171;
+      color: #f87171;
+    }
+
+    .mgmt-top-row {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px;
+      margin-bottom: 8px;
+      align-items: stretch;
+    }
+
+    .mgmt-employee-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      width: fit-content;
+    }
+
+    .mgmt-employee-section .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 0 0 auto;
+    }
+
+    .mgmt-employee-section .field label {
+      font-size: 11px;
+    }
+
+    .mgmt-employee-section .field input {
+      font-size: 14px;
+      padding: 8px 10px;
+      height: 38px;
+      width: 230px;
+    }
+
+    .mgmt-stats-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      min-width: 0;
+    }
+
+    .mgmt-stats-title {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    .mgmt-stats-section .stats-row {
+      grid-template-columns: repeat(4, minmax(120px, 1fr));
+    }
+
+    .mgmt-stats-section .stat-card {
+      padding: 12px 14px;
+    }
+
+    .mgmt-stats-section .stat-label {
+      margin-bottom: 6px;
+      font-size: 11px;
+    }
+
+    .mgmt-stats-section .stat-value {
+      font-size: 24px;
+    }
+
+    .mgmt-stats-section .stat-value .stat-denominator {
+      font-size: 16px;
+    }
+
+    .mgmt-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 1200px) {
+      .mgmt-container {
+        grid-template-columns: 1fr;
+      }
+
+      .mgmt-top-row {
+        grid-template-columns: 1fr;
+      }
+
+      .mgmt-employee-section {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .mgmt-employee-section .field input {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .mgmt-stats-section .stats-row {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .mgmt-lend-container,
+    .mgmt-return-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .mgmt-new-lend-form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .mgmt-new-lend-form .panel-header {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .mgmt-new-lend-form .form-grid {
+      padding: 10px 12px;
+      gap: 8px;
+      grid-template-columns: 1fr auto !important;
+      align-items: start;
+    }
+
+    .mgmt-new-lend-form .btn-primary {
+      padding: 0 14px !important;
+      height: 42px !important;
+      font-size: 13px !important;
+    }
+
+    .mgmt-new-lend-form #mgmt-device-help {
+      white-space: nowrap;
+    }
+
+    @media (max-width: 900px) {
+      .mgmt-new-lend-form #mgmt-device-help {
+        white-space: normal;
+      }
+    }
+
+    .mgmt-lend-actions {
+      align-self: start;
+      margin-top: 23px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .mgmt-lend-rescan.hidden {
+      display: none;
+    }
+
+    .existing-loans-list {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .existing-loans-list-header {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: 0.7fr 1.2fr 1fr 1fr 1fr;
+      gap: 8px;
+      font-size: 12px;
+      font-family: var(--mono);
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      align-items: center;
+      width: 100%;
+    }
+
+    .existing-loans-list-item {
+      padding: 12px 12px;
+      border-bottom: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: 0.7fr 1.2fr 1fr 1fr 1fr;
+      gap: 8px;
+      align-items: center;
+      font-size: 14px;
+      width: 100%;
+    }
+
+    .existing-loans-list-item:last-child {
+      border-bottom: none;
+    }
+
+    .existing-loans-list-item:hover {
+      background: var(--surface2);
+    }
+
+    .existing-loans-list-header>div:nth-child(2),
+    .existing-loans-list-header>div:nth-child(3),
+    .existing-loans-list-header>div:nth-child(4),
+    .existing-loans-list-header>div:nth-child(5) {
+      text-align: center;
+    }
+
+    .existing-loans-list-item> :nth-child(2),
+    .existing-loans-list-item> :nth-child(3),
+    .existing-loans-list-item> :nth-child(4),
+    .existing-loans-list-item> :nth-child(5) {
+      justify-self: center;
+      text-align: center;
+    }
+
+    .existing-loans-item-code {
+      color: var(--text);
+      background: var(--surface2);
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border2);
+      font-family: var(--mono);
+      font-size: 14px;
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .part-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: var(--mono);
+      white-space: nowrap;
+      min-height: 34px;
+    }
+
+    .part-badge.out {
+      background: var(--warn--dim);
+      color: var(--warn);
+      border: 1px solid rgba(251, 146, 60, .35);
+    }
+
+    .part-badge.back {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid rgba(74, 222, 128, .35);
+    }
+
+    .btn-relend {
+      background: var(--accent);
+      color: #0a1a0a;
+      border: none;
+      border-radius: 7px;
+      padding: 6px 12px;
+      height: auto;
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: .04em;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all .15s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+    }
+
+    .btn-relend:hover {
+      background: #86efac;
+      transform: translateY(-1px);
+    }
+
+    .btn-relend:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .existing-loans-empty {
+      padding: 24px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .cam-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .72);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s;
+    }
+
+    .cam-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .cam-modal {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 14px;
+      width: 480px;
+      max-width: 96vw;
+      overflow: hidden;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, .6);
+    }
+
+    .cam-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .cam-title {
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cam-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+
+    .cam-dot.active {
+      background: var(--accent);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+
+    .btn-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      border-radius: 5px;
+      transition: all .15s;
+    }
+
+    .btn-close:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .cam-body {
+      position: relative;
+      background: #000;
+      aspect-ratio: 4/3;
+      overflow: hidden;
+    }
+
+    .cam-body video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .cam-guide {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cam-guide-box {
+      width: 200px;
+      height: 200px;
+      position: relative;
+    }
+
+    .cam-corner {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border-color: var(--accent);
+      border-style: solid;
+      opacity: .9;
+    }
+
+    .cam-corner.tl {
+      top: 0;
+      left: 0;
+      border-width: 3px 0 0 3px;
+      border-radius: 3px 0 0 0;
+    }
+
+    .cam-corner.tr {
+      top: 0;
+      right: 0;
+      border-width: 3px 3px 0 0;
+      border-radius: 0 3px 0 0;
+    }
+
+    .cam-corner.bl {
+      bottom: 0;
+      left: 0;
+      border-width: 0 0 3px 3px;
+      border-radius: 0 0 0 3px;
+    }
+
+    .cam-corner.br {
+      bottom: 0;
+      right: 0;
+      border-width: 0 3px 3px 0;
+      border-radius: 0 0 3px 0;
+    }
+
+    .cam-scan-line {
+      position: absolute;
+      left: 4px;
+      right: 4px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      animation: scanline 2s ease-in-out infinite;
+    }
+
+    @keyframes scanline {
+      0% {
+        top: 8%
+      }
+
+      50% {
+        top: 90%
+      }
+
+      100% {
+        top: 8%
+      }
+    }
+
+    .cam-footer {
+      padding: 12px 18px;
+      border-top: 1px solid var(--border);
+    }
+
+    .cam-status {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .cam-status.found {
+      color: var(--accent);
+    }
+
+    .cam-status.err {
+      color: var(--danger);
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 3px;
+    }
+
+    .admin-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .72);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s;
+    }
+
+    .admin-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .admin-modal {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 14px;
+      width: 400px;
+      max-width: 96vw;
+      overflow: hidden;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, .6);
+    }
+
+    .admin-modal-header {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .admin-modal-title {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      letter-spacing: .04em;
+    }
+
+    .admin-modal-body {
+      padding: 20px
+    }
+
+    .admin-field {
+      margin-bottom: 16px;
+    }
+
+    .admin-field label {
+      display: block;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .admin-field input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border2);
+      border-radius: 7px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      outline: none;
+      transition: border-color .15s;
+    }
+
+    .admin-field input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+
+    .admin-error {
+      color: #f87171;
+      font-family: var(--mono);
+      font-size: 11px;
+      margin-top: 6px;
+    }
+
+    .admin-modal-footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .btn-cancel {
+      background: var(--surface2);
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 8px 16px;
+      font-family: var(--mono);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .btn-cancel:hover {
+      background: var(--border);
+    }
+
+    .admin-menu {
+      position: fixed;
+      top: 56px;
+      right: 0;
+      width: 240px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-right: none;
+      border-radius: 0 0 0 10px;
+      box-shadow: -4px 4px 12px rgba(0, 0, 0, .3);
+      z-index: 199;
+      transform: translateX(100%);
+      transition: transform .2s;
+    }
+
+    .admin-menu.open {
+      transform: translateX(0);
+    }
+
+    .admin-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+      transition: all .15s;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+    }
+
+    .admin-menu-item:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .admin-menu-item svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    .admin-menu-item:last-child {
+      border-bottom: none;
+    }
+  </style>
 </head>
+
 <body>
-<div class="layout">
-	<header>
-		<div class="logo" onclick="showTab('management')">
-			<div class="logo-icon">
-				<svg viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="5" height="5" rx="1.2" fill="currentColor"/><rect x="7" y="1" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.5"/><rect x="1" y="7" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.5"/><rect x="7" y="7" width="5" height="5" rx="1.2" fill="currentColor"/></svg>
-			</div>
-			安全端末管理
-		</div>
-		<div class="sep"></div>
-		<div class="header-controls">
-			<div class="header-stat"><div class="dot-live"></div><span id="live-count">-</span>&nbsp;台 貸出中</div>
-			<button class="admin-btn" onclick="toggleAdminMenu()" title="管理者向けメニュー">
-				<svg viewBox="0 0 16 16" fill="none"><rect x="4" y="7" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M6 7V4a2 2 0 0 1 4 0v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="8" cy="10.5" r="0.8" stroke="currentColor" stroke-width="1.2"/></svg>
-			</button>
-		</div>
-	</header>
+  <div class="layout">
+    <header>
+      <div class="logo" onclick="showTab('management')">
+        <div class="logo-icon">
+          <svg viewBox="0 0 13 13" fill="none">
+            <rect x="1" y="1" width="5" height="5" rx="1.2" fill="currentColor" />
+            <rect x="7" y="1" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.5" />
+            <rect x="1" y="7" width="5" height="5" rx="1.2" fill="currentColor" opacity="0.5" />
+            <rect x="7" y="7" width="5" height="5" rx="1.2" fill="currentColor" />
+          </svg>
+        </div>
+        安全端末管理
+      </div>
+      <div class="sep"></div>
+      <div class="header-controls">
+        <div class="header-stat">
+          <div class="dot-live"></div><span id="live-count">-</span>&nbsp;台 貸出中
+        </div>
+        <button class="admin-btn" onclick="toggleAdminMenu()" title="管理者向けメニュー">
+          <svg viewBox="0 0 16 16" fill="none">
+            <rect x="4" y="7" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.2" />
+            <path d="M6 7V4a2 2 0 0 1 4 0v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+            <circle cx="8" cy="10.5" r="0.8" stroke="currentColor" stroke-width="1.2" />
+          </svg>
+        </button>
+      </div>
+    </header>
 
-	<aside></aside>
+    <aside></aside>
 
-	<main id="main-content"></main>
-</div>
+    <main id="main-content"></main>
+  </div>
 
-<div class="admin-overlay" id="admin-overlay">
-	<div class="admin-modal">
-		<div class="admin-modal-header">
-			<div class="admin-modal-title">管理者認証</div>
-		</div>
-		<div class="admin-modal-body">
-			<div class="admin-field">
-				<label>パスワード</label>
-				<input type="password" id="admin-password" placeholder="管理者パスワードを入力" onkeypress="if(event.key==='Enter')submitAdminAuth()">
-				<div class="admin-error" id="admin-error"></div>
-			</div>
-		</div>
-		<div class="admin-modal-footer">
-			<button class="btn-cancel" onclick="closeAdminAuth()">キャンセル</button>
-			<button class="btn-primary" onclick="submitAdminAuth()">認証</button>
-		</div>
-	</div>
-</div>
+  <div class="admin-overlay" id="admin-overlay">
+    <div class="admin-modal">
+      <div class="admin-modal-header">
+        <div class="admin-modal-title">管理者認証</div>
+      </div>
+      <div class="admin-modal-body">
+        <div class="admin-field">
+          <label>パスワード</label>
+          <input type="password" id="admin-password" placeholder="管理者パスワードを入力"
+            onkeypress="if(event.key==='Enter')submitAdminAuth()">
+          <div class="admin-error" id="admin-error"></div>
+        </div>
+      </div>
+      <div class="admin-modal-footer">
+        <button class="btn-cancel" onclick="closeAdminAuth()">キャンセル</button>
+        <button class="btn-primary" onclick="submitAdminAuth()">認証</button>
+      </div>
+    </div>
+  </div>
 
-<div class="admin-menu" id="admin-menu">
-	<button class="admin-menu-item" onclick="showTab('dashboard')">
-		<svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/></svg>
-		ダッシュボード
-	</button>
-	<button class="admin-menu-item" onclick="showTab('log')">
-		<svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-		ログ一覧
-	</button>
-	<button class="admin-menu-item" onclick="showTab('devices')">
-		<svg viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5 13v1M11 13v1M4 14h8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-		端末管理
-	</button>
-	<button class="admin-menu-item" onclick="logoutAdmin()">
-		<svg viewBox="0 0 16 16" fill="none"><path d="M10 10l3 3m0-3l-3 3M11 2H5a2 2 0 00-2 2v8a2 2 0 002 2h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-		ログアウト
-	</button>
-</div>
-</div>
+  <div class="admin-menu" id="admin-menu">
+    <button class="admin-menu-item" onclick="showTab('dashboard')">
+      <svg viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3" />
+        <rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3" />
+        <rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3" />
+        <rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3" />
+      </svg>
+      ダッシュボード
+    </button>
+    <button class="admin-menu-item" onclick="showTab('log')">
+      <svg viewBox="0 0 16 16" fill="none">
+        <path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+      </svg>
+      ログ一覧
+    </button>
+    <button class="admin-menu-item" onclick="showTab('devices')">
+      <svg viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.3" />
+        <path d="M5 13v1M11 13v1M4 14h8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+      </svg>
+      端末管理
+    </button>
+    <button class="admin-menu-item" onclick="logoutAdmin()">
+      <svg viewBox="0 0 16 16" fill="none">
+        <path d="M10 10l3 3m0-3l-3 3M11 2H5a2 2 0 00-2 2v8a2 2 0 002 2h6" stroke="currentColor" stroke-width="1.3"
+          stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      ログアウト
+    </button>
+  </div>
+  </div>
 
-<div class="cam-overlay" id="cam-overlay">
-	<div class="cam-modal">
-		<div class="cam-header">
-			<div class="cam-title">
-				<div class="cam-dot" id="cam-dot"></div>
-				QR / バーコード読み取り
-			</div>
-			<button class="btn-close" onclick="closeCamera()">
-				<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-			</button>
-		</div>
-		<div class="cam-body">
-			<video id="cam-video" autoplay playsinline muted></video>
-			<div class="cam-guide">
-				<div class="cam-guide-box">
-					<div class="cam-corner tl"></div>
-					<div class="cam-corner tr"></div>
-					<div class="cam-corner bl"></div>
-					<div class="cam-corner br"></div>
-					<div class="cam-scan-line"></div>
-				</div>
-			</div>
-		</div>
-		<div class="cam-footer">
-			<div class="cam-status" id="cam-status">カメラを起動しています...</div>
-		</div>
-	</div>
-</div>
+  <div class="cam-overlay" id="cam-overlay">
+    <div class="cam-modal">
+      <div class="cam-header">
+        <div class="cam-title">
+          <div class="cam-dot" id="cam-dot"></div>
+          QR / バーコード読み取り
+        </div>
+        <button class="btn-close" onclick="closeCamera()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
+      <div class="cam-body">
+        <video id="cam-video" autoplay playsinline muted></video>
+        <div class="cam-guide">
+          <div class="cam-guide-box">
+            <div class="cam-corner tl"></div>
+            <div class="cam-corner tr"></div>
+            <div class="cam-corner bl"></div>
+            <div class="cam-corner br"></div>
+            <div class="cam-scan-line"></div>
+          </div>
+        </div>
+      </div>
+      <div class="cam-footer">
+        <div class="cam-status" id="cam-status">カメラを起動しています...</div>
+      </div>
+    </div>
+  </div>
 
-<div class="toast" id="toast"></div>
+  <div class="toast" id="toast"></div>
 
-<script src="libs/zxing-browser.min.js"></script>
-<script>
-	
-</script>
+  <script src="libs/zxing-browser.min.js"></script>
+  <script>
+    const API = '';
+    let filterStatus = 'all', filterQuery = '', filterEventType = 'all';
+    let isAdmin = false;
+    let isBrokenDeviceDetected = false;
+
+    let cameraStream = null;
+    let codeReader = null;
+    let cameraTargetId = null;
+    let lastScanned = null;
+    let scanning = false;
+
+    let lendScanCandidates = [];
+    let returnScanCandidates = [];
+    let spLendScanCandidates = [];
+    let returnSelectionsByType = {
+      full_set: null,
+      smartphone_only: null,
+      dock_and_cable_only: null,
+    };
+
+    function resetReturnSelections() {
+      returnSelectionsByType = {
+        full_set: null,
+        smartphone_only: null,
+        dock_and_cable_only: null,
+      }
+    }
+
+    function setReturnSelection(type, loanId) {
+      if (!(type in returnSelectionsByType)) return;
+      returnSelectionsByType[type] = loanId ? Number(loanId) : null;
+    }
+
+    function applyReturnSelection(type) {
+      const hidden = document.getElementById('ret-loan-val');
+      const detectedEl = document.getElementLById('ret-detected');
+      if (!hidden || !detectedEl) return;
+
+      const selectedId = returnSelectionsByType[type];
+      const candidates = getReturnCandidatesByType(type);
+      const selected = candidates.find(c => c.value === selectedId);
+
+      if (selected) {
+        hidden.value = String(selected.value);
+        detectedEl.textContent = `${selected.no}`;
+        detectedEl.className = 'device-detected found';
+      } else {
+        hidden.value = '';
+        detectedEl.textContent = '未検出';
+        detectedEl.className = 'device-detected';
+      }
+    }
+
+    function getCurrentReturnType() {
+      return document.getElementById('ret-return-type')?.value || 'full_set';
+    }
+
+    function getReturnCandidatesByType(type) {
+      const targetType = type || getCurrentReturnType();
+      if (targetType === 'dock_and_cable_only') {
+        return returnScanCandidates.filter(c => !c.is_smartphone_out && (c.is_dock_out || c.is_cable_out));
+      }
+      if (targetType === 'smartphone_only') {
+        return returnScanCandidates.filter(c => c.is_smartphone_out);
+      }
+      if (targetType === 'full_set') {
+        return returnScanCandidates.filter(c => c.is_smartphone_out && (c.is_dock_out || c.is_cable_out));
+      }
+      return returnScanCandidates;
+    }
+
+    function updateManagementStats(devices, alloLoans) {
+      const statsRoot = document.getElementById('mgmt-stats');
+      if (!statsRoot) return;
+
+      const activeDevices = devices.filter(d => d.status === 'active');
+      const nonLendableDeviceIds = new Set(devices.filter(d => d.status !== 'active').map(d => d.id));
+
+      const lendingLoans = allLoans.filter(isLoanActive);
+      const lendingLoanActive = lendingLoans.filter(l => !nonLendableDeviceIds.has(l.device_id));
+      const smartphoneOutDeviceIds = new Set(
+        lendingLoansActive.filter(isPhoneOut).map(l => l.device_id)
+      );
+      const smartphoneStockCount = activeDevices.filter(d => !smartphoneOutDeviceIds.has(d.id)).length;
+      const availableDevices = devices.filter(d => !d.is_lending && d.status === 'active');
+      const today = new Date().toISOString().slice(0, 10);
+      const todayCoutn = allLoans.filter(
+        l => (l.lent_at || '').startsWith(today) || (l.smartphone_relent_at || '').startsWith(today)
+      ).length;
+
+      statsRoot.innerHTML = `
+		<div class="stat-card orange"><div class="stat-label">貸出中</div><div class="stat-value" id="mgmt-lending">-</div></div>
+		<div class="stat-card green"><div class="stat-label">利用可能</div><div class="stat-value" id="mgmt-avail">-</div></div>
+		<div class="stat-card blue"><div class="stat-label">スマホ一時保管・充電台数</div><div class="stat-value" id="mgmt-phone-stock">-</div></div>
+		<div class="stat-card purple"><div class="stat-label">本日貸出</div><div class="stat-value" id="mgmt-today">-</div></div>
+	`;
+      document.getElementById('mgmt-lending').innerHTML = `${lendingLoansActive.length}<span class="stat-denominator">/ ${activeDevices.length}</span>`;
+      document.getElementById('mgmt-avail').innerHTML = `${availableDevices.length}<span class="stat-denominator">/ ${activeDevices.length}</span>`;
+      document.getElementById('mgmt-phone-stock').innerHTML = `${smartphoneStockCount}<span class="stat-denominator">/ ${activeDevices.length}</span>`;
+      document.getElementById('mgmt-today').textContent = todayCount;
+
+      lendScanCandidates = devices.map(d => ({
+        value: d.id,
+        no: (d.no || '').toString().trim(),
+        device_id_code: d.device_id_code,
+        status: d.status,
+        is_lending: d.is_lending,
+      }));
+
+      returnScanCandidates = lendingLoans.map(l => ({
+        value: l.id,
+        no: (l.device.no || '').toString().trim(),
+        device_id_code: l.device.device_id_code,
+        status: l.device.status,
+        user_employee_id: l.user_employee_id || '',
+        is_smartphone_out: !!l.is_smartphone_out,
+        is_dock_out: !!l.is_dock_out,
+        is_cable_out: !!l.is_cable_out,
+        active_sp_employee_id: (l.smartphone_loans || []).find(sl => !sl.returned_at)?.user_employee_id || null,
+      }));
+
+      spLendScanCandidates = lendingLoans
+        .filter(l => !l.is_smartphone_out && (l.is_dock_out || l.is_cable_out))
+        .map(l => ({
+          value: l.id,
+          no: (l.device.no || '').toString().trim(),
+          device_id_code: l.device.device_id_code,
+        }));
+
+      window.mgmtAllLoans = allLoans;
+      window.mgmtAllDevices = devices;
+    }
+
+    async function openCamera(targetId) {
+      cameraTargetId = targetId;
+      lastScanned = null;
+      scanning = false;
+
+      if (targetId === 'ret') {
+        const currentType = getCurrentReturnType();
+        const candidates = getReturnCandidatesByType(currentType);
+        if (candidates.length === 0) {
+          const detectedEl = document.getElementById('ret-detected');
+          const retLoanVal = document.getElementById('ret-loan-val');
+          const retBtn = document.getElementById('ret-btn');
+          let missLabel = '対象外：返却済みの端末です。';
+          if (currentType === 'smartphone_only') {
+            missLabel = '対象外：返却済みのスマホです。';
+          } else if (currentType === 'dock_and_cable_only') {
+            missLabel = '該当する台座・コードは存在しません。';
+          }
+          if (detectedEl) {
+            detectedEl.textContent = missLabel;
+            detectedEl.className = 'device-detected miss';
+          }
+          if (retLoanVal) retLoanVal.value = '';
+          if (retBtn) retBtn.disabled = true;
+          disableReturnFields();
+          showToast(missLabel, true);
+          return;
+        }
+      }
+
+      const overlay = document.getElementById('cam-overlay');
+      overlay.classList.add('open');
+      const statusEl = document.getElementById('cam-status');
+      const dot = document.getElementById('cam-dot');
+      statusEl.textContent = 'カメラを起動しています...';
+      statusEl.className = 'cam-status';
+      dot.className = 'cam-dot';
+
+      try {
+        const video = document.getElementById('cam-video');
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+        });
+        video.srcObject = cameraStream;
+        await video.play().catch(() => { });
+
+        codeReader = new ZxingBrowserMultiFormatReader();
+        statusEl.textContent = 'コードをカメラに向けてください';
+        dot.className = 'cam-dot active';
+        scanning = true;
+
+        codeReader.decodeFromVideoElement(video, (result, err) => {
+          if (!scanning) return;
+          if (result) {
+            const text = result.getText().trim();
+            if (text === lastScanned) return;
+            lastScanned = text;
+            handleScanResult(text);
+          }
+        });
+      } catch (e) {
+        statusEl.textContent = e.name === 'NotAllowedError'
+          ? 'カメラの使用が拒否されています（ブラウザ設定を確認）'
+          : 'カメラエラー: ' + e.message;
+        statusEl.className = 'cam-status err';
+      }
+    }
+
+    function handleScanResult(scanned) {
+      const statusEl = document.getElementById('cam-status');
+      const dot = document.getElementById('cam-dot');
+      const currentReturnType = cameraTargetId === 'ret' ? getCurrentReturnType() : null;
+      const candidates = cameraTargetId === 'lend' ? lendScanCandidates
+        : cameraTargetId === 'sp-lend' ? spLendScanCandidates
+          : getReturnCandidatesByType(currentReturnType);
+
+      const candidate = candidates.find(c => {
+        if (c.no === '' || c.no !== scanned) return false;
+        if (cameraTargetId === 'lend' && (c.status === 'broken' || c.status === 'retired')) return false;
+        if (cameraTargetId === 'ret' && c.status === 'broken') return false;
+        return true;
+      });
+
+      const detectedEl = document.getElementById(
+        cameraTargetId === 'lend' ? 'lend-detected'
+          : cameraTargetId === 'sp-lend' ? 'sp-lend-detected'
+            : 'ret-detected'
+      );
+      let autoSwitchedReturnType = false;
+
+      if (candidate) {
+        scanning = false;
+        if (codeReader) { try { codeReader.reset(); } catch { } codeReader = null; }
+
+        const hiddenInput = document.getElementById(
+          cameraTargetId === 'lend' ? 'lend-device-val'
+            : cameraTargetId === 'sp-lend' ? 'sp-lend-loan-val'
+              : 'ret-loan-val'
+        );
+        if (hiddenInput) hiddenInput.value = candidate.value;
+
+        if (detectedEl) {
+          detectedEl.textContent = `${candidate.no}`;
+          detectedEl.className = 'device-detected found';
+        }
+
+        statusEl.textContent = `✔︎ No ${candidate.no} を検知しました`;
+        statusEl.className = 'cam-status found';
+        dot.className = 'cam-dot';
+        showToast(`No ${candidate.no} を検知しました`);
+
+        if (cameraTargetId === 'lend') {
+          if (candidate.status === 'broken' || candidate.status === 'retired') {
+            detectedEl.className = 'device-detected miss';
+            statusEl.textContent = candidate.status === 'retired' ? '❌ この端末は廃却済みです' : '❌ この端末は故障中です';
+            statusEl.className = 'cam-status err';
+            const hiddenInput = document.getElementById('lend-device-val');
+            if (hiddenInput) hiddenInput.value = '';
+            isBrokenDeviceDetected = true;
+            const guideEl = document.getElementById('mgmt-guide-text');
+            if (guideEl) {
+              guideEl.textContent = candidate.status === 'retired'
+                ? '❌ 廃却済み端末です。別の端末を読み取りください。'
+                : '❌ 故障中の端末です。別の端末を読み取りください。';
+              guideEl.style.color = '#f87171';
+            }
+            updateManagementGuide();
+          } else if (candidate.is_lending) {
+            detectedEl.className = 'device-detected miss';
+            detectedEl.textContent = `No ${candidate.no} は既に貸出中の端末です。別の端末を読み取りください。`;
+            statusEl.textContent = `❌ No ${candidate.no} は既に貸出中の端末です。別の端末を読み取りください。`;
+            statusEl.className = 'cam-status err';
+            const hiddenInput = document.getElementById('lend-device-val');
+            if (hiddenInput) hiddenInput.value = '';
+            isBrokenDeviceDetected = false;
+            updateManagementGuide();
+          } else {
+            isBrokenDeviceDetected = false;
+            const guideEl = document.getElementById('mgmt-guide-text');
+            if (guideEl) guideEl.style.color = '';
+            updateManagementGuide();
+          }
+        } else if (cameraTargetid === 'sp-lend') {
+          updateSpLendBtn();
+          setTimeout(() => closeCamera(), 900);
+        } else if (cameraTargetId === 'ret') {
+          setReturnSelection(currentReturnType, candidate.value);
+          applyReturnSelection(currentReturnType);
+          initReturnTypeSelector(candidate);
+          applyReturnIssueConstraint();
+        }
+        setTimeout(() => closeCamera(), 900);
+      } else {
+        let missLabel;
+        let missStatus;
+        if (cameraTargetId === 'ret') {
+          if (currentReturnType === 'smartphone_only') {
+            missLabel = `No ${scanned} に該当するスマホはありません。`;
+            missStatus = `No ${scanned} は登録されていません`;
+          } else if (currentReturnType === 'dock_and_cable_only') {
+            missLabel = `No ${scanned} に該当する台座・コードはありません。`;
+            missStatus = `No ${scanned} は登録されていません`;
+          } else {
+            missLabel = `No ${scanned} に該当する端末はありません。`;
+            missStatus = `No ${scanned} は登録されていません`;
+          }
+        } else if (cameraTargetId === 'sp-lend') {
+          missLabel = `No ${scanned} に該当するスマホはありません。`;
+          missStatus = `No ${scanned} は登録されていません`;
+        } else {
+          missLabel = `No ${scanned} に該当する端末はありません。`;
+          missStatus = `No ${scanned} は登録されていません`;
+        }
+
+        if (cameraTargetId === 'sp-lend') {
+          const allLoans = window.mgmtAllLoans || [];
+          const lendingLoans = allLoans.filter(isLoanActive);
+          const matchedLoan = lendingLoans.find(l => (l.device?.no || '').toString().trim() === scanned);
+
+          if (matchedLoan) {
+            if (matchedLoan.is_smartphone_out) {
+              missLabel = `No ${scanned} は既に貸出中の端末です。別の端末を読み取りください。`;
+              missStatus = `No ${scanned} は既に貸出中の端末です。別の端末を読み取りください。`;
+            } else if (!matchedLoan.is_dock_out && !matchedLoan.is_cable_out) {
+              missLabel = `No ${scanned} の台座・コードは未貸出です。`;
+              missStatus = `No ${scanned} は台座・コード貸出中ではないため対象外です`;
+            }
+          } else {
+            const deviceExists = lendScanCandidates.some(c => c.no !== '' && c.no === scanned);
+            if (deviceExists) {
+              const isBroken = lendScanCandidates.some(c => c.no !== '' && c.no === scanned && c.status === 'broken');
+              if (isBroken) {
+                missLabel = `No ${scanned} に該当するスマホはありません。`;
+                missStatus = `No ${scanned} は登録されていません`;
+              } else {
+                missLabel = `No ${scanned} はスマホ単体貸出です。端末一式を貸出してください。`;
+                missStatus = `No ${scanned} はスマホ単体貸出です。端末一式を貸出してください`;
+              }
+            }
+          }
+        } else if (cameraTargetId === 'ret') {
+          setReturnSelection(currentReturnType, null);
+          const brokenDeviceExists = lendScanCandidates.some(c => c.no !== '' && c.no === scanned && c.status === 'broken');
+          if (brokenDeviceExists) {
+            if (currentReturnType === 'smartphone_only') {
+              missLabel = `No ${scanned} に該当するスマホはありません。`;
+              missStatus = `No ${scanned} は登録されていません`;
+            } else if (currentReturnType === 'dock_and_cable_only') {
+              missLabel = `No ${scanned} に該当する台座・コードはありません。`;
+              missStatus = `No ${scanned} は登録されていません`;
+            } else {
+              missLabel = `No ${scanned} に該当する端末はありません。`;
+              missStatus = `No ${scanned} は登録されていません`;
+            }
+          } else {
+            if (candidates.length === 0) {
+              if (currentReturnType === 'full_set') {
+                missLabel = `該当する端末はありません。`;
+                missStatus = `端末一式返却の対象となる貸出中の端末がありません`;
+              } else if (currentReturnType === 'smartphone_only') {
+                missLabel = `該当するスマホはありません。`;
+                missStatus = `スマホ返却の対象となるスマホ貸出中の端末がありません`;
+              } else if (currentReturnType === 'dock_and_cable_only') {
+                missLabel = `該当する台座・コードはありません。`;
+                missStatus = `台座・コード返却の対象となる端末がありません`;
+              }
+            }
+            const deviceExists = lendScanCandidates.some(c => c.no !== '' && c.no === scanned);
+            if (!deviceExists) {
+              if (currentReturnType === 'smartphone_only') {
+                missLabel = `No ${scanned} に該当するスマホはありません。`;
+                missStatus = `No ${scanned} は登録されていません`;
+              } else if (currentReturnType === 'dock_and_cable_only') {
+                missLabel = `No ${scanned} に該当する台座・コードはありません。`;
+                missStatus = `No ${scanned} は登録されていません`;
+              } else {
+                missLabel = `No ${scanned} に該当する端末はありません。`;
+                missStatus = `No ${scanned} は登録されていません`;
+              }
+            } else {
+              if (currentReturnType === 'smartphone_only') {
+                missLabel = `No ${scanned} は貸出されていません。`;
+                missStatus = `No ${scanned} は現在貸出されていません`;
+              } else if (currentReturnType === 'dock_and_cable_only') {
+                missLabel = `No ${scanned} は貸出されていません。`;
+                missStatus = `No ${scanned} は現在貸出されていません`;
+              } else {
+                missLabel = `No ${scanned} は貸出されていません。`;
+                missStatus = `No ${scanned} は現在貸出されていません`;
+              }
+            }
+            const matchedLoan = returnScanCandidates.find(c => c.no !== '' && c.no === scanned);
+            if (matchedLoan) {
+              if (currentReturnType === 'smartphone_only') {
+                if (!matchedLoan.is_smartphone_out) {
+                  missLabel = `No ${scanned} は返却済みのスマホです。`;
+                  missStatus = `No ${scanned} は返却済みのスマホです`;
+                }
+              } else if (currentReturnType === 'dock_and_cable_only') {
+                if (matchedLoan.is_smartphone_out) {
+                  missLabel = `No ${scanned} はスマホ未返却です。`;
+                  missStatus = `No ${scanned} はスマホ未返却です`;
+                } else if (!matchedLoan.is_dock_out && !matchedLoan.is_cable_out) {
+                  missLabel = `No ${scanned} は返却対象外の台座・コードです。`;
+                  missStatus = `No ${scanned} は台座・コード返却の対象外です`;
+                }
+              } else if (currentReturnType === 'full_set') {
+                if (!matchedLoan.is_smartphone_out) {
+                  if (matchedLoan.is_dock_out || matchedLoan.is_cable_out) {
+                    setReturnSelection('dock_and_cable_only', matchedLoan.value);
+                    setReturnType('dock_and_cable_only');
+                    initReturnTypeSelector(matchedLoan, true);
+                    applyReturnIssueConstraint();
+                    autoSwitchedReturnType = true;
+                    missLabel = `${matchedLoan.no}`;
+                    missStatus = `✔︎ No ${scanned} を検知しました（台座・コード返却に切り替えました）`;
+                    showToast('スマホ返却済みのため、台座・コード返却に切り替えました');
+                  } else {
+                    missLabel = '対象外：スマホは返却済み。台座・コード返却から返却してください。';
+                    missStatus = `No ${scanned} は端末一式返却の対象外です`;
+                  }
+                } else if (!matchedLoan.is_dock_out && !matchedLoan.is_cable_out) {
+                  missLabel = `対象外： ${scanned} （台座/コード返却済み）`;
+                  missStatus = `No ${scanned}は端末一式返却の対象外です`;
+                }
+              }
+            }
+          }
+        }
+
+        if (autoSwitchedReturnType) {
+          if (detectedEl) {
+            detectedEl.textContent = missLabel;
+            detectedEl.className = 'device-detected found';
+          }
+          statusEl.textContent = missStatus;
+          statusEl.className = 'cam-status found';
+          dot.className = 'cam-dot';
+          setTimeout(() => closeCamera(), 900);
+          return;
+        }
+
+        if (detectedEl) {
+          detectedEl.textContent = missLabel;
+          detectedEl.className = 'device-detected miss';
+        }
+        statusEl.textContent = missStatus;
+        statusEl.className = 'cam-status err';
+        if (cameraTargetId === 'lend') {
+          updateManagementGuide();
+          setTimeout(() => closeCamera(), 900);
+        }
+        if (cameraTargetId === 'sp-lend') {
+          const spLoanVal = document.getElementById('sp-lend-loan-val');
+          if (spLoanVal) spLoanVal.value = '';
+          updateSpLendBtn();
+          setTimeout(() => closeCamera(), 900);
+        }
+        if (cameraTargetId === 'ret') {
+          const retLoanVal = document.getElementById('ret-loan-val');
+          if (retLoanVal) retLoanVal.value = '';
+          const retBtn = document.getElementById('ret-btn');
+          if (retBtn) retBtn.disabled = true;
+          disableReturnFields();
+          setTimeout(() => closeCamera(), 900);
+        }
+      }
+    }
+
+    function closeCamera() {
+      document.getElementById('cam-overlay').classList.remove('open');
+      scanning = false;
+      if (codeReader) { try { codeReader.reset(); } catch { } codeReader = null; }
+      if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+      const video = document.getElementById('cam-video');
+      if (video) video.srcObject = null;
+      lastScanned = null;
+      cameraTargetId = null;
+    }
+
+    window.addEventListener('keydown', e => { if (e.key === 'Escase') closeCamera(); });
+
+    async function apiFetch(path, options = {}) {
+      const res = await fetch(API + path, { headers: { 'Content-Type': 'application/json' }, ...options });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || res.statusText);
+      }
+      if (res.status === 204) return null;
+      return res.json();
+    }
+
+    function showToast(msg, error = false) {
+      const t = document.getElementById('toast');
+      t.className = 'toast' + (error ? ' error' : '');
+      t.innerHTML = `<svg width="14" viewBox="0 0 14 14" fill="none"><path d="${error ? 'M2 2l10 10M12 2L2 12' : 'M2 7l3.5 3.5L12 3'}" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>${msg}`;
+      t.classList.add('show');
+      const duration = msg.includes('既に貸出中') ? 5000 : 3500;
+      setTimeout(() => t.classList.remove('show'), duration);
+    }
+
+    function validateEmployeeCode(code) {
+      return /^[0-9]{7}$/.test(code) || /^[SZ][0-9]{6}$/.test(code);
+    }
+    function normalizeEmployeeCode(code) { return code.toUpperCase(); }
+
+    function fmt(iso) {
+      if (!iso) return '-';
+      const d = new Date(iso);
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+        + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
+    }
+
+    function isPhoneOut(loan) { return !!loan.is_smartphone_out; }
+    function isDockOut(loan) { return !!loan.is_dock_out; }
+    function isCableOut(loan) { return !!loan.is_cable_out; }
+    function isLoanActive(loan) { return isPhoneOut(loan) || isDockOut(loan) || isCableOut(loan); }
+
+    function loanStatusText(loan) {
+      if (!isLoanActive(loan)) return '返却済み';
+      if (isPhoneOut(loan) && (isDockOut(loan) || isCableOut(loan))) return '端末+台座貸出中';
+      if (!isPhontOut(loan) && (isDockOut(loan) || isCableOut(loan))) return '台座のみ貸出中';
+      if (isPhoneOut(loan) && !isDockOut(loan) && !isCableOut(loan)) return 'スマホのみ貸出中';
+      return '貸出中';
+    }
+
+    function loanStatusClass(loan) {
+      return isLoanActive(loan) ? 'status-lending' : 'status-returned';
+    }
+
+    async function updateHeader() {
+      try {
+        const loans = await apiFetch('/loans?status=lending&limit=500');
+        document.getElementById('live-count').textContent = loans.length;
+      } catch { }
+    }
+
+    function showTab(tab) {
+      closeCamera();
+      closeAdminMenuAndAuth();
+
+      if (['dashboard', 'log', 'devices'].includes(tab)) {
+        if (!isAdmin) {
+          showAdminAuth();
+          return;
+        }
+      }
+
+      const main = document.getElementById('main-content');
+      if (tab === 'management') renderManagement(main);
+      else if (tab === 'dashboard') renderDashboard(main);
+      else if (tab === 'log') renderLog(main);
+      else if (tab === 'devices') renderDevices(main);
+    }
+
+    function camBtn(targetId, label = '読み取り', withIcon = true) {
+      return `<button class="btn-camera" type="button" id="${targetId}-cam-btn" onclick="openCamera('${targetId}')" title="カメラで読み取り">
+		${withIcon ? '<svg viewBox="0 0 16 16" fill="none"><path d="M1 5.5V4a1 1 0 011-1h2l1-1.5h6L12 3h2a1 1 0 011 1v8.5a1 1 0 01-1 1H2a1 1 0 01-1-1V5.5z" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.2"/></svg>' : ''}
+		${label}
+	</button>`;
+    }
+
+    function toggleAdminMenu() {
+      const menu = document.getElementById('admin-menu');
+      if (menu.classList.contains('open')) {
+        menu.classList.remove('open');
+      } else {
+        if (!isAdmin) {
+          showAdminAuth();
+        } else {
+          menu.classList.add('open');
+        }
+      }
+    }
+
+    function closeAdminMenuAdnAuth() {
+      document.getElementById('admin-menu').classList.remove('open');
+      document.getElementById('admin-overlay').classList.remove('open');
+    }
+
+    function showAdminAuth() {
+      document.getElementById('admin-overlay').classList.add('open');
+      document.getElementById('admin-password').value = '';
+      document.getElementById('admin-error').textContent = '';
+      setTimeout(() => document.getElementById('admin-password').focus(), 100);
+    }
+
+    function closeAdminAuth() {
+      document.getElementById('admin-overlay').classList.remove('open');
+      document.getElementById('admin-password').value = '';
+      document.getElementById('admin-error').textContent = '';
+    }
+
+    function submitAdminAuth() {
+      const password = document.getElementById('admin-password')?.value;
+      const errorEl = document.getElementById('admin-error');
+
+      if (!password) {
+        errorEl.textContent = 'パスワードを入力してください';
+        return;
+      }
+
+      apiFetch('/admin/auth', {
+        method: 'POST',
+        body: JSON.stringify({ password: password })
+      }).then(res => {
+        if (res.success) {
+          isAdmin = true;
+          document.getElementById('admin-overlay').classList.remove('open');
+          document.getElementById('admin-menu').classList.add('open');
+          showToast('管理者として認証されました');
+        } else {
+          errorEl.textContent = 'パスワードが正しくありません';
+          document.getElementById('admin-password').select();
+        }
+      }).catch(e => {
+        errorEl.textContent = '認証エラー: ' + e.message;
+      });
+    }
+
+    function logoutAdmin() {
+      isAdmin = false;
+      document.getElementById('admin-menu').classList.remove('open');
+      showTab('management');
+      showToast('ログアウトしました');
+    }
+
+    async function renderDashboard(el) {
+      el.innerHTML = `<div class="page-header"><div><div class="page-title>ダッシュボード</div><div class="page-sub" id="dash-sub">読み込み中...</div></div></div>
+  <div class="panel" id="dash-panel"><div class="panel-header"><div class="panel-title">現在の貸出状況</div></div><div class="empty">読み込み中...</div></div>
+  <div class="panel" id="dash-broken-panel"><div class="panel-header"><div class="panel-title">故障・廃却端末</div></div><div class="empty">読み込み中...</div></div>`;
+
+      try {
+        const [allLoans, allDevices] = await Promise.all([
+          apiFetch('/loans?limit=500'),
+          apiFetch('/devices'),
+        ]);
+        const lendingLoans = allLoans.filter(isLoanActive);
+        const trackedDevices = allDevices.filter(d => d.status !== 'active');
+        document.getElementById('dash-sub').textContent = fmt(new Date().toISOString()) + ' 現在';
+        document.getElementById('live-count').textContent = lendingLoans.length;
+
+        const panel = document.getElementById('dash-panel');
+        panel.innerHTML = `<div class="panel-header"><div class="panel-title">現在の貸出状況</div></div><div class="table-wrap">${lendingLoans.length === 0 ? '<div class="empty">現在貸出中の端末はありません</div>'
+            : `<table><thead><tr><th>No</th><th>ID</th><th>ステータス</th><th>従業員コード</th><th>貸出日時</th></tr></thead><tbody>${lendingLoans.map(l => `<tr>
+          <td style="font-family:var(--mono);font-size:12px;color:var(--text)">${l.device.no || '-'}</td>
+          <td><span class="device-id">${l.device.device_id_code}</span></td>
+          <td><span class="status-pill ${loanStatusClass(l)}">${loanStatusText(l)}</span></td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text-muted)">${l.user_employee_id || '-'}</td>
+          <td class="time-cell">${fmt(l.lent_at)}</td>
+        </tr>`).join('')
+            }</tbody></table>`
+          }</div>`;
+
+        const brokenPanel = document.getElementById('dash-broken-panel');
+        brokenPanel.innerHTML = `<div class="panel-header">
+      <div class="panel-title">故障・廃却端末</div>
+      <span class="sep"></span>
+      <span style="font-family:var(--mono);font-size:13px;color:var(--danger)">${trackedDevices.length} 台</span>
+    </div><div class="table-wrap">${trackedDevices.length === 0 ? '<div class="empty">故障・廃却端末はありません</div>'
+            : `<table><thead><tr><th>No</th><th>ID</th><th>ステータス</th><th>報告者</th><th>故障日時</th><th>故障内容</th></tr></thead><tbody>${trackedDevices.map(d => {
+              const stripPrefix = n => n ? n.replace(/^異常あり[:：]\s*/, '') : n;
+              const lastNote = stripPrefix(d.broken_note
+                || allLoans.filter(l => l.device_id === d.id && l.note).sort((a, b) => new Date(b.lent_at) - new Date(a.lent_at))[0]?.note
+                || null);
+              return `<tr>
+          <td style="font-family:var(--mono);font-size:12px;color:var(--text)">${d.no || '-'}</td>
+          <td><span class="device-id">${d.device_id_code}</span></td>
+          <td><span class="status-pill ${d.status === 'retired' ? 'status-retired' : 'status-broken'}">${d.status === 'retired' ? '廃却' : '故障中'}</span></td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text-muted)">${d.broken_reported_by || '-'}</td>
+          <td class="time-cell">${fmt(d.broken_at)}</td>
+          <td style="font-size:13px;color:var(--danger)">${lastNote || '<span style="color:var(--text-muted)">-</span>'}</td>
+        </tr>`;
+            }).join('')
+            }</tbody></table>`
+          }</div>`;
+      } catch (e) { el.innerHTML += `<div class="error-msg">APIエラー: ${e.message}</div>`; }
+    }
+
+    async function restoreDevice(deviceId, btn) {
+      btn.disabled = true;
+      btn.textContent = '処理中_';
+      try {
+        await apiFetch(`/devices/${deviceId}/status`, {
+          method: 'PATCH',
+          body: JSON.strignify({ status: 'active' })
+        });
+        showToast('端末を故障復帰しました');
+        const el = document.querySelector('.main-content');
+        if (el) renderDashboard(el);
+      } catch (e) {
+        showToast(e.message, true);
+        btn.disabled = false;
+        btn.textContent = '故障復帰';
+      }
+    }
+
+    let currentEmployeeCode = '';
+    let currentEmployeeLoans = [];
+
+    async function renderManagement(el) {
+      el.innerHTML = `<div class="guide-box" id="mgmt-guide-box">
+    <span class="guide-step" aria-hidden="true"></span>
+    <div class="guide-text" id="mgmt-guide-text">従業員コードを入力してください。</div>
+  </div>
+  <div class="mgmt-top-row">
+    <div class="mgmt-employee-section">
+      <div class="field">
+        <label>従業員コード</label>
+        <input type="text" id="mgmt-employee-code" maxlength="7" placeholder="例: 1234567 / S123456" oninput="onMgmtEmployeeCodeInput()">
+        <div class="field-help" id="mgmt-code-help">7桁の従業員コードを入力してください</div>
+      </div>
+    </div>
+    <div class="mgmt-stats-section">
+      <div class="mgmt-stats-title">統計</div>
+      <div class="stats-row" id="mgmt-stats"><div class="empty" style="grid-column:1/-1;padding:24px">読み込み中...</div></div>
+    </div>
+  </div>
+  <div class="mgmt-container">
+    <div class="mgmt-lend-container">
+      <div class="mgmt-new-lend-form" id="mgmt-new-lend-form" style="display:none;">
+        <div class="panel-header>
+          <div class="panel-title">貸出処理</div>
+          <span class="sep"></span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="panel-badge">項目</span>
+            <button type="button" class="ret-type-btn active" id="lend-mode-full-btn" onclick="setLendMode('full_set')" style="height:30px;font-size:12px;padding:0 10px;">端末一式貸出</button>
+            <button type="button" class="ret-type-btn" id="lend-mode-sp-btn" onclick="setLendMode('smartphone')" style="height:30px;font-size:12px;padding:0 10px;">スマホ貸出</button>
+          </div>
+        </div>
+        <div id="lend-fullset-area">
+          <div class="form-grid cols-2">
+            <div class="field">
+              <label>端末</label>
+              <div class="device-scan-field">
+                <div id="lend-detected" class="device-detected">未検出</div>
+              </div>
+              <div class="field-help" id="mgmt-device-help">「QRコード読取」ボタンを押して、端末のQRコードを読み取ってください。</div>
+              <input type="hidden" id="lend-device-val">
+            </div>
+            <div class="mgmt-lend-actions">
+              <button class="btn-primary" id="lend-cam-btn" type="button" onclick="handleLendRescan()" disabled>
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4.5 6.5h2l1.1-1.8c.2-.4.6-.7 1.1-.7h2.6c.5 0 .9.3 1.1.7l1.1 1.8h2a2 2 0 0 1 2 2v6.5a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2V8.5a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="11.3" r="2.7" stroke="currentColor" stroke-width="1.5"/></svg>
+                QRコード読取
+              </button>
+            </div>
+          </div>
+          <div style="padding:0 12px 10px;display:flex;flex-direction:column;gap:10px;">
+            <label style="display:flex;align-items:center;gap:8px;margin:0;font-size:15px;color:var(--text-dim);font-family:var(--sans);text-transform:none;letter-spacing:0;cursor:pointer;">
+              <input type="checkbox" id="lend-rule-confirm" onchange="updateManagementGuide()" style="width:16px;height:16px;accent-color:var(--accent);" disabled>
+              <span>テストコースルールを遵守します</span>
+            </label>
+            <div>
+              <button class="btn-primary" id="lend-btn" onclick="submitLengMgtm()" disabled>端末一式貸出登録</button>
+            </div>
+          </div>
+        </div>
+        <div id="lend-sp-area" style="display:none;">
+          <div class="form-grid cols-2">
+            <div class="field">
+              <label>端末（台座/コード貸出中）</lable>
+              <div class="device-scan-field">
+                <div id="sp-lend-detected" class="device-detected">未検出</div>
+              </div>
+              <div class="field-help" id="sp-lend-device-help">「QRコード読取」ボタンを押して、端末のQRコードを読み取ってください。</div>
+              <input type="hidden" id="sp-lend-loan-val" value="">
+            </div>
+            <div class="mgmt-lend-actions">
+              <button class="btn-primary" id="sp-lend-cam-btn" type="button" onclick="openCamera('sp-lend')">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4.5 6.5h2l1.1-1.8c.2-.4.6-.7 1.1-.7h2.6c.5 0 .9.3 1.1.7l1.1 1.8h2a2 2 0 0 1 2 2v6.5a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2V8.5a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="11.3" r="2.7" stroke="currentColor" stroke-width="1.5"/></svg>
+                QRコード読取
+              </button>
+            </div>
+          </div>
+          <div style="padding:0 12px 10px;display:flex;flex-direction:column;gap:10px;">
+            <label style="display:flex;align-items:center;gap:8px;margin:0;font-size:15px;color:var(--text-dim);font-family:var(--sans);text-transform:none;letter-spacing:0;cursor:pointer;">
+              <input type="checkbox" id="sp-lend-dock-confirm" onchange="updateSpLendBtn()" style="width:16px;height:16px;accent-color:var(--accent);" disabled>
+              <span>台座NoとスマホNoが一致していることを確認しました</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;margin:0;font-size:15px;color:var(--text-dim);font-family:var(--sans);text-transform:none;letter-spacing:0;cursor:pointer;">
+              <input type="checkbox" id="sp-lend-rule-confirm" onchange="updateSpLendBtn()" style="width:16px;height:16px;accent-color:var(--accent);" disabled>
+              <span>テストコースルールを遵守します</span>
+            </label>
+            <div>
+              <button class="btn-primary" id="sp-lend-btn" onclick="submitSmartphoneLend()" disabled>スマホ貸出登録</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="existing-loans-list" id="existing-loans-container" style="display:none;">
+        <div class="existing-loans-empty">従業員コードを入力してください</div>
+      </div>
+    </div>
+    <div class="mgmt-return-container" id="mgmt-return-container" style="display:none;">
+      <div class="panel" id="mgmt-ret-panel">
+        <div class="panel-header"><div class="panel-title">返却処理</div></div>
+        <div class="empty">従業員コードを入力してください</div>
+      </div>
+    </div>
+  </div>`;
+
+      try {
+        const [devices, allLoans] = await Promise.all([
+          apiFetch('/devices'),
+          apiFetch('/loans?limit=500')
+        ]);
+        updateManagementStats(devices, allLoans);
+        updateManagementGuide();
+      } catch (e) { el.innerHTML += `<div class="error-msg">APIエラー: ${e.message}</div>`; }
+
+    }
+
+    function updateManagementGuide() {
+      const guideEl = document.getElementById('mgmt-guide-text');
+      const codeHelpEl = document.getElementById('mgmt-code-help');
+      const deviceHelpEl = document.getElementById('mgmt-device-help');
+      const lendBtn = document.getElementById('lend-btn');
+      const lendCamBtn = document.getElementById('lend-cam-btn');
+      const lendRuleConfirm = document.getElementById('lend-rule-confirm');
+      if (!guideEl) return;
+
+      if (isBrokenDeviceDetected) {
+        return;
+      }
+
+      guideEl.style.color = '';
+
+      const rawCode = document.getElementById('mgmt-employee-code')?.value.trim() || '';
+      const code = normalizeEmployeeCode(rawCode);
+      const validCode = validateEmployeeCode(code);
+      const defaultGuideText = '貸出処理・返却処理から項目を選択し、必要な処理を行ってください。';
+      const deviceId = parseInt(document.getElementById('lend-device-val')?.value);
+      const hasDevice = !!deviceId;
+      const ruleConfirmed = !!document.getElementById('lend-rule-confirm')?.checked;
+
+      if (!rawCode) {
+        guideEl.textContent = '従業員コードーを入力してください。';
+        if (codeHelpEl) {
+          codeHelpEl.textContent = '7桁の従業員コードを入力してください';
+          codeHelpEl.className = 'field-help';
+        }
+      } else if (!validCode) {
+        guideEl.textContent = '従業員コードは7桁数字または S/Z + 6桁で入力してください。';
+        if (codeHelpEl) {
+          codeHelpEl.textContent = '7桁数字、または S/Z + 6桁で入力してください。';
+          codeHelpEl.className = 'field-help warn';
+        }
+      } else {
+        guideEl.textContent = defaultGuideText;
+        if (codeHelpEl) {
+          codeHelpEl.textContent = '従業員コードを確認しました。';
+          codeHelpEl.className = 'field-help ok';
+        }
+      }
+
+      if (lendRuleConfirm) {
+        lendRuleConfirm.disabled = !hasDevice;
+        if (!hasDevice) lendRuleConfirm.checked = false;
+      }
+      if (lendBtn) {
+        lendBtn.disabled = !(validCode && hasDevice && ruleConfirmed);
+      }
+      if (lendCamBtn) {
+        lendCamBtn.disabled = !validCode;
+      }
+    }
+
+    async function onMgmtEmployeeCodeInput() {
+      const rawCode = document.getElementById('mgmt-employee-code')?.value.trim() || '';
+      const code = normalizeEmployeeCode(rawCode);
+
+      currentEmployeeCode = '';
+      currentEmployeeLoans = [];
+      isBrokenDeviceDetected = false;
+
+      const lendDetected = document.getElementById('lend-detected');
+      const lendDeviceCal = document.getElementById('lend-device-val');
+      if (lendDetected) {
+        lendDetected.textContent = '未検出';
+        lendDetected.className = 'device-detected';
+      }
+      if (lendDeviceVal) lendDeviceVal.value = '';
+
+      const spDetected = document.getElementById('sp-lend-detected');
+      const spLoanVal = document.getElementById('sp-lend-loan-val');
+      const spDockConfirm = document.getElementById('sp-lend-dock-confirm');
+      const spRuleConfirm = document.getElementById('sp-lend-rule-confirm');
+      const lendRuleConfirm = document.getElementById('lend-rule-confirm');
+      if (spDetected) {
+        spDetected.textContent = '未検出';
+        spDetected.className = 'device-detected';
+      }
+      if (spLoanVal) spLoanVal.value = '';
+      if (spDockConfirm) spDockConfirm.checked = false;
+      if (spRuleConfirm) spRuleConfirm.checked = false;
+      if (lendRuleConfirm) lendRuleConfirm.checked = false;
+      updateSpLendBtn();
+      setLendMode('full_set');
+
+      const lendBtn = document.getElementById('lend-btn');
+      const lendForm = document.getElementById('mgmt-new-lend-form');
+      const returnContainer = document.getElementById('mgmt-return-container');
+      if (lendBtn) lendBtn.disabled = true;
+      if (lendForm) lendForm.style.display = 'none';
+      if (returnContainer) returnContainer.style.display = 'none';
+
+      const existingContainer = document.getElementById('existing-loans-container');
+      const returnPanel = document.getElementById('mgmt-ret-panel');
+      if (existingContainer) existingContainer.style.display = 'none';
+      updateManagementGuide();
+
+      if (!validateEmployeeCode(code)) {
+        if (existingContainer) existingContainer.innerHTML = '<div class="existing-loans-empty">有効な従業員コードを入力してください</div>';
+        if (returnPanel) returnPanel.innerHTML = '<div class="panel-header"><div class="panel-title">返却処理</div></div><div class="empty">従業員コードを入力してください</div>';
+        updateManagementGuide();
+        return;
+      }
+
+      currentEmployeeCode = code;
+
+      try {
+        const loans = await apiFetch('/loans?status=lending&limit=200&q=' + encodeURIComponent(code));
+        currentEmployeeLoans = loans.filter(l => {
+          const borrowerIds = Array.isArray(l.borrower_employee_ids) ? l.borrower_employee_ids : [];
+          if (borrowerIds.length > 0) {
+            return borrowerIds.map(v => (v || '').toUpperCase()).includes(code);
+          }
+          const isDockBorrower = (l.user_employee_id || '').toUpperCase() === code;
+          const activeSpLoan = (l.smartphone_loans || []).find(sl => !sl.returned_at);
+          const isSmartphoneBorrower = activeSpLoan && activeSpLoan.user_employee_id.toUpperCase() === code;
+          return isDockBorrower || isSmartphoneBorrower;
+        });
+
+        renderExistingLoansList(currentEmployeeLoans);
+
+        const allLendingLoans = (window.mgmtAllLoans || []).filter(isLoanActive);
+        renderReturnPanel(allLendingLoans);
+        initReturnTypeSelector(null);
+        disableReturnFields();
+
+        const hasExistingLoans = currentEmployeeLoans.length > 0;
+
+        if (existingContainer) existingContainer.style.display = hasExistingLoans ? '' : 'none';
+        if (lendForm) lendForm.style.display = '';
+        if (returnContainer) returnContainer.style.display = '';
+        if (lendBtn) lendBtn.disabled = false;
+        updateManagementGuide();
+      } catch (e) {
+        if (lendForm) lendForm.style.display = '';
+        if (existingContainer) existingContainer.style.display = '';
+        if (returnContainer) returnContainer.style.display = '';
+        if (existingContainer) existingContainer.innerHTML = `<div class="existing-loans-empty">読み込みエラー: ${e.message}</div>`;
+        if (returnPanel) returnPanel.innerHTML = `<div class="panel-header"><div class="panel-title">返却処理</div></div><div class="error-msg">${e.message}</div>`;
+        updateManagementGuide();
+      }
+    }
+
+    async function handleLendPrimaryAction() {
+      const lendBtn = document.getElementById('lend-btn');
+      if (lendBtn?.disabled) return;
+
+      const code = currentEmployeeCode;
+      const deviceId = parseInt(document.getElementById('lend-device-val')?.value);
+
+      if (!validateEmployeeCode(code)) {
+        showToast('従業員コードを入力してください', true);
+        return;
+      }
+
+      if (!deviceId) {
+        await openCamera('lend');
+        return;
+      }
+
+      const candidate = lendScanCandidates.find(c => c.value == deviceId);
+      if (candidate && (candidate.status === 'broken' || candidate.status === 'retired')) {
+        showToast(candidate.status === 'retired' ? '廃却済み端末です。別の端末を読み取りください。' : '故障中の端末です。別の端末を読み取りください。', true);
+        return;
+      }
+
+      await submitLendMgmt();
+    }
+
+    async function handleLendRescan() {
+      const code = currentEmployeeCode;
+      if (!validateEmployeeCode(code)) {
+        showToast('従業員コードを入力してください', true);
+        return;
+      }
+
+      document.getElementById('lend-device-val').value = '';
+      const detectedEl = document.getElementById('lend-detected');
+      if (detectedEl) {
+        detectedEl.textContent = '未検出';
+        detectedEl.className = 'device-detected';
+      }
+      isBrokenDeviceDetected = false;
+      updateManagementGuide();
+      await openCamera('lend');
+    }
+
+    function renderExistingLoansList(loans) {
+      const container = document.getElementById('existing-loans-container');
+      if (!container) return;
+
+      if (loans.length === 0) {
+        container.innerHTML = '<div class="panel-header"><div class="panel-title">既存貸出</div></div><div class="existing-loans-empty">この従業員に紐づく貸出がありません</div>';
+        return;
+      }
+
+      const html = loans.map(loan => {
+        const deviceNo = loan.device?.no || '-';
+        const deviceCode = loan.device?.device_id_code || '-';
+        const phoneLabel = loan.is_smartphone_out ? '貸出中' : '返却済み';
+        const dockStatus = loan.is_dock_out ? '貸出中' : '返却済み';
+        const cableStatus = loan.is_cable_out ? '貸出中' : '返却済み';
+
+        return `
+      <div class="existing-loans-list-item">
+        <div style="font-family:var(--mono);color:var(--text);">${deviceNo}</div>
+        <span class="existing-loans-item-code">${deviceCode}</span>
+        <span class="part-badge ${loan.is_smartphone_out ? 'out' : 'back'}" style="flex-direction:column;align-items:flex-start;gap:2px;">${phoneLabel}</span>
+        <span class="part-badge ${loan.is_dock_out ? 'out' : 'back'}">${dockStatus}</span>
+        <span class="part-badge ${loan.is_cable_out ? 'out' : 'back'}">${cableStatus}</span>
+      </div>
+    `;
+      }).join('');
+
+      const header = `
+    <div class="existing-loans-list-header">
+      <div>No</div>
+      <div>ID</div>
+      <div>スマホ</div>
+      <div>台座</div>
+      <div>コード</div>
+    </div>
+  `;
+
+      container.innerHTML = `<div class="panel-header"><div class="panel-title">既存貸出</div></div>${header}${html}`;
+    }
+
+    function renderReturnPanel(loans) {
+      const panel = document.getElementById('mgmt-ret-panel');
+      if (!panel) return;
+      resetReturnSelections();
+
+      if (loans.length === 0) {
+        panel.innerHTML = `<div class="panel-header"><div class="panel-title">返却処理</div></div><div class="empty">現在、貸出中の端末はありません</div>`;
+        return;
+      }
+
+      returnScanCandidates = loans.map(l => ({
+        value: l.id,
+        no: (l.device?.no || '').toString().trim(),
+        device_id_code: l.device?.device_id_code || '',
+        user_employee_id: l.user_employee_id || '',
+        is_smartphone_out: !!l.is_smartphone_out,
+        is_dock_out: !!l.is_dock_out,
+        is_cable_out: !!l.is_cable_out,
+        active_sp_employee_id: (l.smartphone_loans || []).find(sl => !sl.returned_at)?.user_employee_id || null,
+      }));
+
+      const returnHtml = `
+    <div class="panel-header">
+      <div class="panel-title">返却処理</div>
+      <span class="sep"></span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="panel-badge">項目</span>
+        <button type="button" class="ret-type-btn" id="ret-type-full-set" onclick="setReturnType('full_set')" disabled style="height:30px;font-size:12px;padding:0 10px;">端末一式返却</button>
+        <button type="button" class="ret-type-btn" id="ret-type-smartphone" onclick="setReturnType('smartphone_only')" disabled style="height:30px;font-size:12px;padding:0 10px;">スマホ返却</button>
+        <button type="button" class="ret-type-btn" id="ret-type-dock-cable" onclick="setReturnType('dock_and_cable_only')" disabled style="height:30px;font-size:12px;padding: 0 10px;">台座・コード返却</button>
+      </div>
+    </div>
+    <div style="padding: 12px 20px; display: flex; flex-direction: column; gap: 10px;">
+      <div class="field">
+        <label id="ret-source-label">端末（貸出中）</label>
+        <div id="ret-source-qr">
+          <div class="device-scan-field">
+            <div id="ret-detected" class="device-detected">未検出</div>
+            ${camBtn('ret', 'QRコード読取', true)}
+          </div>
+        </div>
+        <input type="hidden" id="ret-loan-val" value="">
+      </div>
+      <div class="field">
+        <label>返却状態</label>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:42px;">
+          <div style="display:flex;align-items:center;gap:16px;">
+            <label for="ret-issue-normal" style="display:flex;align-items:center;gap:8px;margin:0;font-size:15px;color:var(--text-dim);font-family:var(--sams);text-transform:none;letter-spacing:0;cursor:pointer;">
+              <input type="radio" name="ret-issue-status" id="ret-issue-normal" value="normal" checked onchange="toggleReturnIssueNote()" style="width:16px;height:16px;accent-color:var(--accent);">
+              <span>異常なし</span>
+            </label>
+            <label for="ret-issue-abnormal" style="display:flex;align-items:center;gap:8px;margin:0;font-size:15px;color:var(--text-dim);font-family:var(--sams);text-transform:none;letter-spacing:0;cursor:pointer;">
+              <input type="radio" name="ret-issue-status" id="ret-issue-abnormal" value="abnormal" onchange="toggleReturnIssueNote()" style="width:16px;height:16px;accent-color:var(--accent);">
+              <span>異常あり</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="field" id="ret-note-wrap" style="display:none;">
+        <label>異常内容</label>
+        <input type="text" id="ret-note" placeholder="例: 画面あり / 背面ヒビ">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px; padding: 2px 0;">
+        <input type="hidden" id="ret-return-type" value="full_set">
+        <div class="ret-summary" id="ret-summary">返却内容: 端末をQRコードで読み取ってください</div>
+        <div class="ret-maint-note" id="ret-maint-note">メンテナンスのため、端末一式返却してください。</div>
+        <label for="ret-cable-check" id="ret-cable-wrap" style="display:flex;align-items:center;gap:8px;margin:0;font-size:15px;color:var(--text-dim);font-family:var(--sans);text-transform:none;letter-spacing:0;cursor:pointer;">
+          <input type="checkbox" id="ret-cable-check" onchange="updateReturnSubmitState()" style="width:16px;height:16px;accent-color:var(--accent);">
+          <span>コード重量（175g ± 5g）を確認しました</span>
+        </label>
+      </div>
+      <div>
+        <button class="btn-primary" id="ret-btn" onclick="submitReturnMgmt()" disabled>返却完了</button>
+      </div>
+    </div>
+  `;
+
+      panel.innerHTML = returnHtml;
+    }
+
+    function toggleReturnIssueNote() {
+      const hasIssue = document.getElementById('ret-issue-abnormal')?.checked === true;
+      const maintainNote = document.getElementById('ret-maint-note');
+      if (!hasIssue && maintainNote) maintainNote.style.display = 'none';
+      updateReturnIssueDependentVisibility();
+      applyReturnIssueConstraint();
+    }
+
+    function updateReturnIssueDependentVisibility() {
+      const hasIssue = document.getElementById('ret-issue-abnormal')?.checked === true;
+      const returnType = document.getElementById('ret-return-type')?.value || 'full_set';
+      const noteWrap = document.getElementById('ret-note-wrap');
+      const noteInput = document.getElementById('ret-note');
+      const retBtn = document.getElementById('ret-btn');
+      const hideForSmartphoneIssue = hasIssue && returnType === 'smartphone_only';
+
+      if (noteWrap) {
+        noteWrap.style.display = hasIssue && !hideForSmartphoneIssue ? '' : 'note';
+      }
+      if (noteInput && (!hasIssue || hideForSmartphoneIssue)) {
+        noteInput.value = '';
+      }
+      if (retBtn) {
+        retBtn.style.display = hideForSmartphoneIssue ? 'none' : '';
+      }
+    }
+
+    function applyReturnIssueConstraint() {
+      const hasIssue = document.getElementById('ret-issue-abnormal')?.checked === true;
+      const btnSmartphone = document.getElementById('ret-type-smartphone');
+      const btnDockCable = document.getElementById('ret-type-dock-cable');
+      const btnFullSet = document.getElementById('ret-type-full-set');
+      const maintainNote = document.getElementById('ret-maint-note');
+      const loanId = parseInt(document.getElementById('ret-loan-val')?.value);
+      const selected = returnScanCandidates.find(c => c.value === loanId);
+      if (!btnSmartphone || !btnDockCable || !btnFullSet || !maintainNote || !selected) return;
+
+      const phoneOut = !!selected.is_smartphone_out;
+      const dockOut = !!selected.is_dock_out;
+      const cableOut = !!selected.is_cable_out;
+
+      if (hasIssue) {
+        btnSmartphone.disabled = true;
+        btnDockCable.disabled = true;
+        btnFullSet.disabled = true;
+        if (!phoneOut && (dockOut || cableOut)) {
+          btnDockCable.disabled = false;
+          setReturnType('dock_and_cable_only');
+          maintainNote.textContent = '異常対応のため、台座・コード返却してください。';
+        } else {
+          btnSmartphone.disabled = false;
+          btnFullSet.disabled = false;
+          setReturnType('full_set');
+          maintainNote.textContent = '異常対応のため、端末一式返却してください。';
+        }
+        maintainNote.style.display = 'block';
+        switchReturnSourceByType(document.getElementById('ret-return-type')?.value || 'full_set');
+        return;
+      }
+
+      maintainNote.textContent = 'メンテナンスのため、端末一式返却してください。';
+      maintainNote.style.display = 'none';
+      initReturnTypeSelector(selected, true);
+    }
+
+    function updateReturnSubmitState() {
+      const btn = document.getElementById('ret-btn');
+      if (!btn) return;
+      const hasIssue = document.getElementById('ret-issue-abnormal')?.checked === true;
+      const returnType = document.getElementById('ret-return-type')?.value || 'full_set';
+
+      if (hasIssue && returnType === 'smartphone_only') {
+        btn.disabled = true;
+        return;
+      }
+
+      const hasCode = validateEmployeeCode(normalizeEmployeeCode(currentEmployeeCode || ''));
+      if (!hasCode) {
+        btn.disabled = true;
+        return;
+      }
+
+      const selected = returnScanCandidates.find(c => c.value === loanId);
+      if (!selected) {
+        btn.disabled = true;
+        return;
+      }
+
+      const cableChecked = !!document.getElementById('ret-cable-check')?.checked;
+      const needsCableCheck = returnType !== 'smartphone_only' && !!selected.is_cable_out;
+      btn.disabled = needsCableCheck && !cableChecked;
+    }
+
+    function setReturnType(type) {
+      const hidden = document.getElementById('ret-return-type');
+      const btnSmartphone = document.getElementById('ret-type-smartphone');
+      const btnDockCable = document.getElementById('ret-type-dock-cable');
+      const btnFullSet = document.getElementById('ret-type-full-set');
+      const summary = document.getElementById('ret-summary');
+      const cableWrap = document.getElementById('ret-cable-wrap');
+      if (!hidden || !btnSmartphone || !btnDockCable || !btnFullSet || !summary || !cableWrap) return;
+
+      hidden.value = type;
+      btnSmartphone.classList.toggle('active', type === 'smartphone_only');
+      btnDockCable.classList.toggle('active', type === 'dock_and_cable_only');
+      btnFullSet.classList.toggle('active', type === 'full_set');
+      cableWrap.style.display = type === 'smartphone_only' ? 'none' : 'flex';
+
+      if (type === 'smartphone_only') {
+        summary.textContent = '返却内容: スマホ';
+      } else if (type === 'dock_and_cable_only') {
+        summary.textContent = '返却内容: 台座・コード';
+      } else {
+        summary.textContent = '返却内容: スマホ・台座・コード';
+      }
+
+      applyReturnSelection(type);
+      switchReturnSourceByType(type);
+      applyReturnSelection(type);
+      updateReturnIssueDependentVisibility();
+      updateReturnSubmitState();
+    }
+
+    function initReturnTypeSelector(loan, keepCurrentType = false) {
+      const btnSmartphone = document.getElementById('ret-type-smartphone');
+      const btnDockCable = document.getElementById('ret-type-dock-cable');
+      const btnFullSet = document.getElementById('ret-type-full-set');
+      const retBtn = document.getElementById('ret-btn');
+      if (!btnSmartphone || !btnDockCable || !btnFullSet || !retBtn) return;
+
+      const phoneOut = !!loan?.is_smartphone_out;
+      const dockOut = !!loan?.is_dock_out;
+      const cableOut = !!loan?.is_cable_out;
+
+      const hasDockCableOnly = returnScanCandidates.some(c => !c.is_smartphone_out && (c.is_dock_out || c.is_cable_out));
+      const hasSmartphoneOut = returnScanCandidates.some(c => c.is_smartphone_out);
+      const hasFullSet = returnScanCandidates.some(c => c.is_smartphone_out && (c.is_dock_out || c.is_cable_out));
+
+      btnSmartphone.disabled = false;
+      btnDockCable.disabled = false;
+      btnFullSet.disabled = false;
+      retBtn.disabled = !loan;
+
+      if (!loan) {
+        btnDockCable.disabled = !hasDockCableOnly;
+        btnSmartphone.disabled = !hasSmartphoneOut;
+        btnFullSet.disabled = !hasFullSet;
+
+        if (keepCurrentType) {
+          const current = document.getElementById('ret-return-type')?.value || 'full_set';
+          const currentBtn = current === 'full_set' ? btnFullSet
+            : current === 'smartphone_only' ? btnSmartphone
+              : btnDockCable;
+          if (!currentBtn.disabled) {
+            setReturnType(current);
+          } else if (hasFullSet) {
+            setReturnType('full_set');
+          } else if (hasSmartphoneOut) {
+            setReturnType('smartphone_only');
+          } else if (hasDockCableOnly) {
+            setReturnType('dock_and_cable_only');
+          }
+        } else if (hasFullSet) {
+          setReturnType('full_set');
+        } else if (hasSmartphoneOut) {
+          setReturnType('smartphone_only');
+        } else if (hasDockCableOnly) {
+          setReturnType('dock_and_cable_only');
+        }
+        updateReturnSubmitState();
+        return;
+      }
+
+      const userSelectedType = document.getElementById('ret-return-type')?.value;
+      const userHasSelected = btnSmartphone.classList.contains('active') ||
+        btnDockCable.classList.contains('active') ||
+        btnFullSet.classList.contains('active');
+
+      if (userHasSelected && userSelectedType) {
+        enableReturnFields();
+        retBtn.disabled = false;
+
+        btnDockCable.disabled = !hasDockCableOnly;
+        btnSmartphone.disabled = !hasSmartphoneOut;
+        btnFullSet.disabled = !hasFullSet;
+
+        const selectedBtn = userSelectedType === 'full_set' ? btnFullSet
+          : userSelected === 'smartphone_only' ? btnSmartphone
+            : btnDockCable;
+        const effectiveType = selectedBtn.disabled
+          ? (hasFullSet ? 'full_set' : (hasSmartphoneOut ? 'smartphone_only' : 'dock_and_cable_only'))
+          : userSelectedType;
+
+        setReturnType(effectiveType);
+        updateReturnSubmitState();
+        return;
+      }
+
+      if (!phoneOut && (dockOut || cableOut)) {
+        enableReturnFields();
+        btnDockCable.disabled = !hasDockCableOnly;
+        btnSmartphone.disabled = !hasSmartphoneOut;
+        btnFullSet.disabled = !hasFullSet;
+        setReturnType('dock_and_cable_only');
+        updateReturnSubmitState();
+        return;
+      }
+      if (phoneOut && !dockOut && !cableOut) {
+        enableReturnFields();
+        btnDockCable.disabled = !hasDockCableOnly;
+        btnSmartphone.disabled = !hasSmartphoneOut;
+        btnFullSet.disabled = !hasFullSet;
+        setReturnType('smartphone_only');
+        updateReturnSubmitState();
+        return;
+      }
+      enableReturnFields();
+      btnDockCable.disabled = !hasDockCableOnly;
+      btnSmartphone.disabled = !hasSmartphoneOut;
+      btnFullSet.disabled = !hasFullSet;
+      setReturnType('full_set');
+      updateReturnSubmitState();
+    }
+
+    function populateDockCableLoanSelect() {
+      const select = document.getElementById('ret-dock-loan-select');
+      if (!select) return;
+
+      const dockCableLoans = returnScanCandidates.filter(c => !c.is_smartphone_out && (c.is_dock_out || c.is_cable_out));
+      const options = ['<option value="">選択してください</option>'].concat(
+        dockCableLoans.map(c => `<option value="${c.value}">${c.no || '-'} / ${c.device_id_code || '-'}</option>`)
+      );
+      select.innerHTML = options.join('');
+
+      const selectedLoanId = parseInt(document.getElementById('ret-loan-val')?.value);
+      const selectedLoan = dockCableLoans.find(c => c.value === selectedLoanId);
+      if (selectedLoan) {
+        select.value = String(selectedLoanId);
+      } else {
+        select.value = '';
+      }
+    }
+
+    function switchReturnSourceByType(type) {
+      const sourceQr = document.getElementById('ret-source-qr');
+      const sourceLabel = document.getElementById('ret-source-label');
+      const retBtn = document.getElementById('ret-btn');
+      const hidden = document.getElementById('ret-loan-val');
+      if (!sourceQr || !sourceLabel || !retBtn || !hidden) return;
+
+      if (type === 'dock_and_cable_only') {
+        sourceLabel.textContent = '端末（スマホ返却済み）';
+        sourceQr.style.display = '';
+
+        const selectedLoanId = parseInt(hidden.value);
+        const validLoan = returnScanCandidates.find(c => c.value === selectedLoanId && !c.is_smartphone_out && (c.is_dock_out || c.is_cable_out));
+        if (!validLoan) {
+          hidden.value = '';
+          setReturnSelection(type, null);
+          retBtn.disabled = true;
+          disableReturnFields();
+        } else {
+          setReturnSelection(type, validLoan.value);
+          retBtn.disabled = false;
+          enableReturnFields();
+        }
+        updateReturnSubmitState();
+        return;
+      }
+
+      if (type === 'smartphone_only') {
+        sourceLabel.textContent = '端末（スマホ貸出中）';
+        sourceQr.style.display = '';
+
+        const selectedLoanId = parseInt(hidden.value);
+        const validLoan = returnScanCandidates.find(c => c.value === selectedLoanId && c.is_smartphone_out);
+        if (!validLoan) {
+          hidden.value = '';
+          setReturnSelection(type, null);
+          retBtn.disabled = true;
+          disableReturnFields();
+        } else {
+          setReturnSelection(type, validLoan.value);
+          retBtn.disabled = false;
+          enableReturnFields();
+        }
+        updateReturnSubmitState();
+        return;
+      }
+
+      sourceLabel.textContent = '端末（貸出中）';
+      sourceQr.style.display = '';
+      const selectedLoanId = parseInt(hidden.value);
+      const validLoan = returnScanCandidates.find(c => c.value === selectedLoanId && c.is_smartphone_out && (c.is_dock_out || c.is_cable_out));
+      if (!validLoan) {
+        hidden.value = '';
+        setReturnSelection(type, null);
+        retBtn.disabled = true;
+        disableReturnFields();
+      } else {
+        setReturnSelection(type, validLoan.value);
+        retBtn.disabled = false;
+        enableReturnFields();
+      }
+      updateReturnSubmitState();
+    }
+
+    function selectDockCableLoanFromList() {
+      const select = document.getElementById('ret-dock-loan-select');
+      const hidden = document.getElementById('ret-loan-val');
+      const retBtn = document.getElementById('ret-btn');
+      if (!select || !hidden || !retBtn) return;
+
+      const loanId = parseInt(select.value);
+      if (!loanId) {
+        hidden.value = '';
+        retBtn.disabled = true;
+        disableReturnFields();
+        updateReturnSubmitState();
+        return;
+      }
+
+      const selected = returnScanCandidates.find(c => c.value === loanId && !c.is_smartphone_out && (c.is_dock_out || c.is_cable_out));
+      if (!selected) {
+        hidden.value = '';
+        retBtn.disabled = true;
+        disableReturnFields();
+        updateReturnSubmitState();
+        return;
+      }
+
+      hidden.value = String(loanId);
+      retBtn.disabled = false;
+      enableReturnFields();
+      updateReturnSubmitState();
+    }
+
+    function enableReturnFields() {
+      const cableCheck = document.getElementById('ret-cable-check');
+      const issueNormal = document.getElementById('ret-issue-normal');
+      const issueAbnormal = document.getElementById('ret-issue-abnormal');
+      const retNote = document.getElementById('ret-note');
+
+      if (cableCheck) cableCheck.disabled = false;
+      if (issueNormal) issueNormal.disabled = false;
+      if (issueAbnormal) issueAbnormal.disabled = false;
+      if (retNote) retNote.disabled = false;
+    }
+
+    function disableReturnFields() {
+      const cableCheck = document.getElementById('ret-cable-check');
+      const issueNormal = document.getElementById('ret-issue-normal');
+      const issueAbnormal = document.getElementById('ret-issue-abnormal');
+      const retNote = document.getElementById('ret-note');
+
+      if (cableCheck) cableCheck.disabled = true;
+      if (issueNormal) issueNormal.disabled = true;
+      if (issueAbnormal) issueAbnormal.disabled = true;
+      if (retNote) retNote.disabled = true;
+    }
+
+    function resetMgmtEmployeeCode() {
+      const employeeInput = document.getElementById('mgmt-employee-code');
+      if (!employeeInput) return;
+      employeeInput.value = '';
+      onMgmtEmployeeCodeInput();
+    }
+
+    async function submitLendMgmt() {
+      const deviceId = parseInt(document.getElementById('lend-device-val')?.value);
+      const code = currentEmployeeCode;
+      const ruleConfirmed = !!document.getElementById('lend-rule-confirm')?.checked;
+
+      if (!deviceId) { showToast('端末をカメラで読み取ってください', true); return; }
+      if (!code) { showToast('従業員コードを入力してください', true); return; }
+      if (!ruleConfirmed) { showToast('テストコースルールの遵守を確認してください', true); return; }
+
+      const btn = document.getElementById('lend-btn');
+      btn.disabled = true;
+      try {
+        const loan = await apiFetch('/loans', {
+          method: 'POST',
+          body: JSON.stringify({
+            device_id: deviceId,
+            user_employee_id: code,
+            test_course_rule_confirmed: ruleConfirmed
+          })
+        });
+        showToast(`${loan.device.device_id_code} を端末一式で貸出登録しました`);
+        document.getElementById('lend-device-val').value = '';
+        document.getElementById('lend-detected').textContent = '未検出';
+        document.getElementById('lend-detected').className = 'device-detected';
+        const spDetected = document.getElementById('sp-lend-detected');
+        const spLoanVal = document.getElementById('sp-lend-loan-val');
+        const spDockConfirm = document.getElementById('sp-lend-dock-confirm');
+        const spRuleConfirm = document.getElementById('sp-lend-rule-confirm');
+        const lendRuleConfirm = document.getElementById('lend-rule-confirm');
+        if (spDetected) {
+          spDetected.textContent = '未検出';
+          spDetected.className = 'device-detected'
+        }
+        if (spLoanVal) spLoanVal.value = '';
+        if (spDockConfirm) spDockConfirm.checked = false;
+        if (spRuleConfirm) spRuleConfirm.checked = false;
+        if (lendRuleConfirm) lendRuleConfirm.checked = false;
+        updateSpLendBtn();
+        isBrokenDeviceDetected = false;
+        updateManagementGuide();
+        updateHeader();
+        await refreshManagementStats();
+        resetMgmtEmployeeCode();
+      } catch (e) { showToast(e.message, true); btn.disabled = false; }
+    }
+
+    function setLendMode(mode) {
+      const fullBtn = document.getElementById('lend-mode-full-btn');
+      const spBtn = document.getElementById('lend-mode-sp-btn');
+      const fullArea = document.getElementById('lend-fullset-area');
+      const spArea = document.getElementById('lend-sp-area');
+      if (!fullBtn || !spBtn || !fullArea || !spArea) return;
+
+      if (mode === 'full_set') {
+        fullBtn.classList.add('active');
+        spBtn.classList.remove('active');
+        fullArea.style.display = '';
+        spArea.style.display = 'none';
+        updateManagementGuide();
+      } else {
+        fullBtn.classList.remove('active');
+        spBtn.classList.add('active');
+        fullArea.style.display = 'none';
+        spArea.style.display = '';
+        const allLoans = window.mgmtAllLoans || [];
+        const lendingLoans = allLoans.filter(isLoanActive);
+        spLendScanCandidates = lendingLoans
+          .filter(l => !l.is_smartphone_out && (l.is_dock_out || l.is_cable_out))
+          .map(l => ({
+            value: l.id,
+            no: (l.device?.no || '').toString().trim(),
+            device_id_code: l.device?.device_id_code || '',
+          }));
+        updateSpLendBtn();
+      }
+    }
+
+    function onSpLendCodeInput() {
+      updateSpLendBtn();
+    }
+
+    function updateSpLendBtn() {
+      const btn = document.getElementById('sp-lend-btn');
+      if (!btn) return;
+      const loanId = parseInt(document.getElementById('sp-lend-loan-val')?.value);
+      const dockConfirmEl = document.getElementById('sp-lend-dock-confirm');
+      const ruleConfirmEl = document.getElementById('sp-lend-rule-confirm');
+      const canCheck = !!loanId;
+      if (dockConfirmEl) {
+        dockConfirmEl.disabled = !canCheck;
+        if (!canCheck) dockConfirmEl.checked = false;
+      }
+      if (ruleConfirmEl) {
+        ruleConfirmEl.disabled = !canCheck;
+        if (!canCheck) ruleConfirmEl.checked = false;
+      }
+      const confirmed = !!dockConfirmEl?.checked;
+      const ruleConfirmed = !!ruleConfirmEl?.checked;
+      const hasCode = validateEmployeeCode(normalizeEmployeeCode(currentEmployeeCode || ''));
+      btn.disabled = !(hasCode && loanId && confirmed && ruleConfirmed);
+    }
+
+    async function submitSmartphoneLend() {
+      const code = normalizeEmployeeCode(currentEmployeeCode || '');
+      const loanId = parseInt(document.getElementById('sp-lend-loan-val')?.value);
+      const confirmed = !!document.getElementById('sp-lend-dock-confirm')?.checked;
+      const ruleConfirmed = !!document.getElementById('sp-lend-rule-confirm')?.checked;
+
+      if (!validateEmployeeCode(code)) { showToast('従業員コードを入力してください', true); return; }
+      if (!loanId) { showToast('端末をQRコードで読み取ってください', true); return; }
+      if (!confirmed) { showToast('台座NoとスマホのNoが一致していることを確認してください', true); return; }
+      if (!ruleConfirmed) { showToast('テストコースルールの遵守を確認してください', true); return; }
+
+      const btn = document.getElementById('sp-lend-btn');
+      btn.disabled = true;
+      try {
+        const loan = await apiFetch('/loans/smartphone-lend', {
+          method: 'POST',
+          body: JSON.stringify({
+            loan_id: loanId,
+            user_employee_id: code,
+            dock_no_confirmed: confirmed,
+            test_course_rule_confirmed: ruleConfirmed
+          })
+        });
+        showToast(`${loan.device.device_id_code} のスマホを貸出登録しました`);
+        document.getElementById('sp-lend-detected').textContent = '未検出';
+        document.getElementById('sp-lend-detected').className = 'device-detected';
+        document.getElementById('sp-lend-loan-val').value = '';
+        document.getElementById('sp-lend-dock-confirm').checked = false;
+        document.getElementById('sp-lend-rule-confirm').checked = false;
+        document.getElementById('lend-rule-confirm').checked = false;
+        updateSpLendBtn();
+        updateHeader();
+        await refreshManagementStats();
+        resetMgmtEmployeeCode();
+        setLendMode('full_set');
+      } catch (e) { showToast(e.message, true); btn.disabled = false; }
+    }
+
+    let lendLookupTimer = null;
+
+    async function submitReturnMgmt() {
+      const operatorCode = normalizeEmployeeCode(currentEmployeeCode || '');
+      const loanId = parseInt(document.getElementById('ret-loan-val')?.value);
+      const selectedReturnType = document.getElementById('ret-return-type')?.value;
+      const cableChecked = !!document.getElementById('ret-cable-check')?.checked;
+      const hasIssue = document.getElementById('ret-issue-abnormal')?.checked === true;
+      const issueNote = document.getElementById('ret-note')?.value.trim();
+      const btn = document.getElementById('ret-btn');
+
+      if (!validateEmployeeCode(operatorCode)) {
+        showToast('返却処理には従業員コードの入力が必要です', true);
+        return;
+      }
+
+      if (!loanId) { showToast('返却端末を選択してください', true); return; }
+
+      const selected = returnScanCandidates.find(c => c.value === loanId);
+      const phoneOut = !!selected?.is_smartphone_out;
+      const dockOut = !!selected?.is_dock_out;
+      const cableOut = !!selected?.is_cable_out;
+
+      let returnType = selectedReturnType || 'full_set';
+      if (hasIssue) {
+        returnType = (!phoneOut && (dockOut || cableOut)) ? 'dock_and_cable_only' : 'full_set';
+      } else if (!phoneOut && (dockOut || cableOut)) {
+        returnType = 'dock_and_cable_only';
+      }
+
+      if (hasIssue && !issueNote) {
+        showToast('異常内容をメモに入力してください', true);
+        return;
+      }
+      const note = hasIssue ? `異常あり：${issueNote}` : null;
+
+      const needsCableCheck = returnType !== 'smartphone_only' && cableOut;
+      if (needsCableCheck && !cableChecked) {
+        showToast('コード重量（175g ± 5g）の確認チェックが必要です', true);
+        return;
+      }
+
+      btn.disabled = true;
+      try {
+        const loan = await apiFetch(`/loans/${loanId}/return`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            return_type: returnType,
+            user_employee_id: operatorCode,
+            cable_weight_checked: cableChecked,
+            note: note || null
+          })
+        });
+        if (loans.cable_weight_ok === false) {
+          showToast(`${loan.device.device_id_code} を返却。コード重量確認が未チェックです`, true);
+        } else {
+          showToast(`${loan.device.device_id_code} の返却を記録しました`);
+        }
+        resetReturnSelections();
+        document.getElementById('ret-loan-val').value = '';
+        document.getElementById('ret-detected').textContent = '未検出';
+        document.getElementById('ret-detected').className = 'device-detected';
+        const lendDetected = document.getElementById('lend-detected');
+        const lendDeviceVal = document.getElementById('lend-device-val');
+        if (lendDetected) {
+          lendDetected.textContent = '未検出';
+          lendDetected.className = 'device-detected';
+        }
+        if (lendDeviceVal) lendDeviceVal.value = '';
+        const spDetected = document.getElementById('sp-lend-detected');
+        const spLoanVal = document.getElementById('sp-lend-loan-val');
+        const spDockConfirm = document.getElementById('sp-lend-dock-confirm');
+        if (spDetected) {
+          spDetected.textContent = '未検出';
+          spDetected.className = 'device-detected';
+        }
+        if (spLoanVal) spLoanVal.value = '';
+        if (spDockConfirm) spDockConfirm.checked = false;
+        updateSpLendBtn();
+        setLendMode('full_set');
+        document.getElementById('ret-return-type').value = 'full_set';
+        document.getElementById('ret-issue-normal').checked = true;
+        document.getElementById('ret-cable-check').checked = false;
+        document.getElementById('ret-note').value = '';
+        toggleReturnIssueNote();
+        updateHeader();
+        await refreshManagementStats();
+        resetMgmtEmployeeCode();
+      } catch (e) { showToast(e.message, true); btn.disabled = false; }
+    }
+
+    async function renderLog(el) {
+      el.innerHTML = `<div class="page-header"><div><div class="page-title">ログ一覧</div><div class="page-sub" id="log-sub">読み込み中...</div></div></div>
+  <div class="panel"><div class="panel-header"><div class="panel-title">履歴</div><div class="sep"></div>
+  <div class="filter-bar">
+    <input class="filter-input" type="text" placeholder="従業員コード..." id="log-q" value="${filterQuery}" oninput="filterQuery=this.value;loadLogs()">
+    <select class="filter-select" onchange="filterStatus"=this.value;loadLogs()">
+      <option value="all" ${filterStatus === 'all' ? 'selected' : ''}>すべて</option>
+      <option value="lending" ${filterStatus === 'lending' ? 'selected' : ''}>貸出中</option>
+      <option value="returned" ${filterStatus === 'returned' ? 'selected' : ''}>返却済み</option>
+    </select>
+    <select class="filter-select" onchange="filterEventType=this.value;loadLogs()">
+      <option value="all" ${filterEventType === 'all' ? 'selected' : ''}>種別: すべて</option>
+      <optgroup label="貸出">
+        <option value="lend_full_set" ${filterEventType === 'lend_full_set' ? 'selected' : ''}>端末一式貸出</option>
+        <option value="lend_smartphone" ${filterEventType === 'lend_smartphone' ? 'selected' : ''}>スマホ貸出</option>
+      </optgroup>
+      <optgroup label="返却">
+        <option value="return_full_set" ${filterEventType === 'return_full_set' ? 'selected' : ''}>端末一式返却</option>
+        <option value="return_smartphone" ${filterEventType === 'return_smartphone' ? 'selected' : ''}>スマホ返却</option>
+        <option value="return_dock_cable" ${filterEventType === 'return_dock_cable' ? 'selected' : ''}>台座・コード返却</option>
+      </optgroup>
+    </select>
+  </div></div>
+  <div class="table-wrap" id="log-table"><div class="empty">読み込み中...</div></div></div>`;
+      loadLogs();
+    }
+
+    async function loadLogs() {
+      const params = new URLSearchParams({ limit: 200 });
+      if (filterStatus !== 'all') params.set('status', filterStatus);
+      if (filterQuery) params.set('q', filterQuery);
+      try {
+        const loans = await apiFetch('/loans?' + params);
+        const allEvents = buildLoanLogEvents(loans);
+        const events = filterEventType === 'all' ? allEvents : allEvents.filter(e => {
+          if (filterEventType === 'lend_full_set') return e.event === '貸出' && e.itemType === '端末一式';
+          if (filterEventType === 'lend_smartphone') return e.event === '貸出' && e.itemType === 'スマホ';
+          if (filterEventType === 'return_full_set') return e.event === '返却' && e.itemType === '端末一式';
+          if (filterEventType === 'return_smartphone') return e.event === '返却' && e.itemType === 'スマホ';
+          if (filterEventType === 'return_dock_cable') return e.event === '返却' && e.itemType === '台座・コード';
+          return true;
+        });
+        document.getElementById('log-sub').textContent = `${events.length} 件（貸出 ${loans.length} 件）`;
+        document.getElementById('log-table').innerHTML = events.length === 0
+          ? '<div class="empty">該当するログがありません</div>'
+          : `<table><thead><tr><th>No</th><th>ID</th><th>イベント</th><th>種別</th><th>従業員コード</th><th>日時</th><th>詳細</th></tr></thead><tbody>${events.map(e => `<tr>
+          <td style="font-family:var(--mono);font-size:12px;color:var(--text)">${e.no || '-'}</td>
+          <td><span class="device-id">${e.deviceIdCode || '-'}</span></td>
+          <td><span class="status-pill ${e.eventClass || 'status-avail'}">${e.event}</span></td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text-muted)">${e.itemType}</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text-muted)">${e.actor || '-'}</td>
+          <td class="time-cell">${fmt(e.at)}</td>
+          <td style="color:var(--text-muted)">${e.detail || '-'}</td>
+        </tr>`).join('')
+          }</tbody></table>`;
+      } catch (e) { showToast(e.message, true); }
+    }
+
+    function buildLoanLogEvents(loans) {
+      const events = [];
+      const seenBrokenEvents = new Set();
+      const seenRecoveredEvents = new Set();
+      const seenRetiredEvents = new Set();
+      const seenDeletedEvents = new Set();
+
+      for (const loan of loans) {
+        const no = loan.device?.no || '-';
+        const deviceIdCode = loan.device?.device_id_code || '-';
+        const deviceStatus = loan.device?.status || 'active';
+        const smartphoneLoans = Array.isArray(loan.smartphone_loans) ? loan.smartphone_loans : [];
+        const loanSmartphoneReturnedTs = loan.smartphone_returned_at ? new Date(loan.smartphone_returned_at).getTime() : null;
+        const dockCableReturnedTs = loan.dock_returned_at
+          ? new Date(loan.dock_returned_at).getTime()
+          : loan.cable_returned_at ? new Date(loan.cable_returned_at).getTime() : null;
+        const isLoanLevelFullSetReturn = loanSmartphoneReturnedTs !== null && dockCableReturnedTs !== null && loanSmartphoneReturnedTs === dockCableReturnedTs;
+        const returnedSmartphoneRecord = loanSmartphoneReturnedTs === null
+          ? null
+          : smartphoneLoans.find(sl => sl.returned_at && new Date(sl.returned_at).getTime() === loanSmartphoneReturnedTs) || null;
+        const initialBundleSmartphoneLoan = smartphoneLoans.find(sl =>
+          (sl.user_employee_id || '').toUpperCase() === (loan.user_employee_id || '').toUpperCase() &&
+          sl.lent_at === loan.lent_at
+        );
+        const fullSetRuleStatus = initialBundleSmartphoneLoan == null
+          ? '-'
+          : (initialBundleSmartphoneLoan.test_course_rule_confirmed ? '済' : '未');
+
+        events.push({
+          no,
+          deviceIdCode,
+          event: '貸出',
+          eventClass: 'status-lending',
+          itemType: '端末一式',
+          actor: loan.user_employee_id || '-',
+          at: loan.lent_at,
+          detail: `ルール遵守: ${fullSetRuleStatus}`,
+        });
+
+        for (const sl of smartphoneLoans) {
+          const isInitialBundleLend =
+            (sl.user_employee_id || '').toUpperCase() === (loan.user_employee_id || '').toUpperCase() &&
+            sl.lent_at === loan.lent_at;
+          const ruleStatus = sl.test_course_rule_confirmed ? '済' : '未';
+
+          if (!isInitialBundleLend) {
+            events.push({
+              no,
+              deviceIdCode,
+              event: '貸出',
+              eventClass: 'status-lending',
+              itemType: 'スマホ',
+              actor: sl.user_employee_id || '-',
+              at: sl.lent_at,
+              detail: `ルール遵守: ${ruleStatus}`,
+            });
+          }
+
+          if (sl.returned_at) {
+            const hasDockOrCableReturn = loan.dock_returned_at || loan.cable_returned_at;
+            const dockCableReturnTime = loan.dock_returned_at
+              ? new Date(loan.dock_returned_at).getTime()
+              : loan.cable_returned_at ? new Date(loan.cable_returned_at).getTime() : null;
+            const spReturnTime = new Date(sl.returned_at).getTime();
+            const isSimultaneousReturn = dockCableReturnTime !== null && spReturnTime === dockCableReturnTime;
+            const isLoanLevelMatchedReturn = hasDockOrCableReturn && loanSmartphoneReturnedTs !== null && spReturnTime === loanSmartphoneReturnedTs && isLoanLevelFullSetReturn;
+            const isInitialBundleReturn = isInitialBundleLend && hasDockOrCableReturn && isSimultaneousReturn;
+
+            if (isInitialBundleReturn || isLoanLevelMatchedReturn) {
+              continue;
+            }
+
+            events.push({
+              no,
+              deviceIdCode,
+              event: '返却',
+              eventClass: 'status-returned',
+              itemType: 'スマホ',
+              actor: sl.returned_by_employee_id || sl.user_employee_id || '-',
+              at: sl.returned_at,
+              detail: '-',
+            });
+          }
+        }
+
+        if (loan.dock_returned_at || loan.cable_returned_at) {
+          const initialBundleSmartphoneReturned = initialBundleSmartphoneLoan?.returned_at;
+          const cableText = loan.cable_weight_ok == null ? '未確認' : (loan.cable_weight_ok ? '確認済' : '不良');
+
+          const dockCableTs = loan.dock_returned_at
+            ? new Date(loan.dock_returned_at).getTime()
+            : loan.cable_returned_at ? new Date(loan.cable_returned_at).getTime() : null;
+          const spTs = initialBundleSmartphoneReturned ? new Date(initialBundleSmartphoneReturned).getTime() : null;
+          const isSameOperation = spTs !== null && dockCableTs !== null && spTs === dockCableTs;
+          const shouldRenderFullSetReturn = (initialBundleSmartphoneReturned && isSameOperation) || isLoanLevelFullSetReturn;
+
+          if (shouldRenderFullSetReturn) {
+            const at = Math.max(
+              loanSmartphoneReturnedTs || spTs || 0,
+              loan.cable_returned_at ? new Date(loan.cable_returned_at).getTime() : 0,
+              loan.dock_returned_at ? new Date(loan.dock_returned_at).getTime() : 0
+            );
+
+            events.push({
+              no,
+              deviceIdCode,
+              event: '返却',
+              eventClass: 'status-returned',
+              itemType: '端末一式',
+              actor: returnedSmartphoneRecord?.returned_by_employee_id || returnedSmartphoneRecord?.user_employee_id || initialBundleSmartphoneLoan?.returned_by_employee_id || initialBundleSmartphoneLoan?.user_employee_id || '-',
+              at: new Date(at).toISOString(),
+              detail: `ケーブル重量: ${cableText}`,
+            });
+          } else {
+            const at = loan.cable_returned_at || loan.dock_returned_at;
+            events.push({
+              no,
+              deviceIdCode,
+              event: '返却',
+              eventClass: 'status-returned',
+              itemType: '台座・コード',
+              actor: '-',
+              at,
+              detail: `ケーブル重量: ${cableText}`,
+            });
+          }
+        }
+
+        const brokenAt = loan.broken_at || loan.device?.broken_at;
+        const brokenActor = loan.broken_reported_by || loan.device?.broken_reported_by || '-';
+        const brokenDetail = loan.broken_note || loan.device?.broken_note || '-';
+        if (brokenAt) {
+          const brokenKey = `${loan.device_id}|${brokenAt}|${brokenActor}|${brokenDetail}`;
+          if (!seenBrokenEvents.has(brokenKey)) {
+            seenBrokenEvents.add(brokenKey);
+            events.push({
+              no,
+              deviceIdCode,
+              event: '故障',
+              eventClass: 'status-broken',
+              itemType: '端末',
+              actor: brokenActor,
+              at: brokenAt,
+              detail: brokenDetail,
+            });
+          }
+        }
+
+        if (loan.device?.recovered_at) {
+          const recoveredKey = `${loan.device_id}|${loan.device?.recovered_at}`;
+          if (!seenRecoveredEvents.has(recoveredKey)) {
+            seenRecoveredEvents.add(recoveredKey);
+            events.push({
+              no,
+              deviceIdCode,
+              event: '復帰',
+              eventClass: 'status-avail',
+              itemType: '端末',
+              actor: '-',
+              at: loan.device?.recovered_at,
+              detail: deviceStatus === 'active' ? '運用復帰' : 'ステータス更新',
+            });
+          }
+        }
+
+        if (loan.device?.retired_at) {
+          const retiredKey = `${loan.device_id}|${loan.device?.retired_at}`;
+          if (!seenRetiredEvents.has(retiredKey)) {
+            seenRetiredEvents.add(retiredKey);
+            events.push({
+              no,
+              deviceIdCode,
+              event: '廃却',
+              eventClass: 'status-retired',
+              itemType: '端末',
+              actor: '-',
+              at: loan.device?.retired_at,
+              detail: '運用終了',
+            });
+          }
+        }
+
+        if (loan.device?.deleted_at) {
+          const deletedKey = `${loan.device_id}|${loan.device?.deleted_at}`;
+          if (!seenDeletedEvents.has(deletedKey)) {
+            seenDeletedEvents.add(deletedKey);
+            events.push({
+              no,
+              deviceIdCode,
+              event: '削除',
+              eventClass: 'status-retired',
+              itemType: '端末',
+              actor: '-',
+              at: loan.device?.deleted_at,
+              detail: '端末DELETE',
+            });
+          }
+        }
+      }
+
+      events.sort((a, b) => {
+        const atA = a.at ? new Date(a.at).getTime() : 0;
+        const atB = b.at ? new Date(b.at).getTime() : 0;
+        return atB - atA;
+      });
+
+      return events;
+    }
+
+    async function renderDevices(el) {
+      el.innerHTML = `<div class="page-header"><div><div class="page-title">端末管理</div><div class="page-sub" id="dev-sub">読み込み中...</div></div></div>
+  <div class="panel">
+    <div class="panel-header"><div class="panel-title">端末を追加</div></div>
+    <div class="form-grid cols-5">
+      <div class="field"><label>No</label><input type="text" id="dev-no" placeholder="例: 1"></div>
+      <div class="field"><label>ID（任意）</label><input type="text" id="dev-idcode" placeholder="例: tt00000"></div>
+      <div class="field"><label>Memo</label><input type="text" id="dev-memo" placeholder="例: 090-1234-5678 など"></div>
+      <div></div>
+      <button class="btn-primary" id="dev-add-btn" onclick="addDevice()">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v11M1 6.5h11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        追加
+      </button>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><div class="panel-title">端末一覧</div><div class="sep"></div>
+    <input class="filter-input" type="text" placeholder="No・ID・Memoで検索..." id="dev-q" oninput="filterDevices(this.value)">
+    </div>
+    <div class="table-wrap" id="dev-table"><div class="empty">読み込み中...</div></div>
+  </div>
+  <div class="panel" style="border-color: rgba(248,113,113,.35);">
+    <div class="panel-header">
+      <div class="panel-title" style="color: var(--danger);">データ管理（危険操作）</div>
+    </div>
+    <div class="form-grid cols-4">
+      <div class="field">
+        <label>削除対象</label>
+        <select id="dev-delete-target"></select>
+      </div>
+      <div class="field">
+        <label>確認入力</label>
+        <input type="text" id="dev-delete-confirm" placeholder="DELETE と入力" oninput="toggleDangerDeleteButton()">
+      </div>
+      <div class="field">
+        <label>注意</label>
+        <div class="field-help warn">削除は端末を一覧から除外する破壊的操作です。通常運用では使用しません。</div>
+      </div>
+      <button class="btn-danger" id="dev-delete-btn" onclick="handleDangerDelete()" disabled>削除実行</button>
+    </div>
+  </div>`;
+      await loanDevices();
+    }
+
+    let allDevicesList = [];
+
+    async function loadDevices() {
+      try {
+        allDevicesList = await apiFetch('/devices');
+        document.getElementById('dev-sub').textContent = `${allDevicesList.length} 台登録中`;
+        renderDeviceTable(allDevicesList);
+        renderDangerDeleteTargets();
+        toggleDangerDeleteButton();
+      } catch (e) { showToast(e.message, true); }
+    }
+
+    function filterDevices(q) {
+      const lq = q.toLowerCase();
+      const filtered = allDevicesList.filter(d =>
+        (d.no || '').toLowerCase().includes(lq) ||
+        (d.device_id_code || '').toLowerCase().includes(lq) ||
+        (d.memo || '').toLowerCase().includes(lq)
+      );
+      renderDeviceTable(filtered);
+    }
+
+    function renderDeviceTable(devices) {
+      const wrap = document.getElementById('dev-table');
+      if (!wrap) return;
+      wrap.innerHTML = devices.length === 0 ? '<div class="empty">端末が見つかりません</div>'
+        : `<table><thead><tr><th>No</th><th>ID</th><th>Memo</th><th>ステータス</th><th>操作</th></tr></thead><tbody>${devices.map(d => `<tr>
+        <td style="font-family:var(--mono);font-size:12px;color:var(--text)">${d.no || '-'}</td>
+        <td><span class="device-id">${d.device_id_code || '-'}</span></td>
+        <td style="color:var(--text-dim)">${d.memo || '-'}</td>
+        <td>
+          <span class="status-pill ${d.is_lending ? 'status-lending' : (d.status === 'retired' ? 'status-retired' : (d.status === 'broken' ? 'status-broken' : 'status-avail'))}">
+            ${d.is_lending ? '貸出中' : (d.status === 'retired' ? '廃却' : (d.status === 'broken' ? '故障中' : '空き'))}
+          </span>
+        </td>
+        <td>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-height:34px;">
+            ${(!d.is_lending && d.status === 'broken') ? `<button class="btn-secondary" style="color:var(--accent);border-color:rgba(74,222,128,.35);background:var(--accent-dim);height:auto;padding:8px 12px" onclick="setDeviceStatus(${d.id}, 'active', '${d.no || d.device_id_code || '-'}')">復帰</button>
+              <button class="btn-danger" onclick="setDeviceStatus(${d.id}, 'retired', '${d.no || d.device_id_code || '-'}')">廃却</button>` : ''}
+            ${(!d.is_lending && d.status === 'retired') ? `<button class="btn-secondary" style="color:var(--accent);border-color:rgba(74,222,128,.35);background:var(--accent-dim);height:auto;padding:8px 12px" onclick="setDeviceStatus(${d.id}, 'active', '${d.no || d.device_id_code || '-'}')">復帰</button>` : ''}
+            ${(d.is_lending || d.status === 'active') ? '<span style="font-size:12px;color:var(--text-muted);">-</span>' : ''}
+          </div>
+        </td>
+      </tr>`).join('')
+        }</tbody></table>`;
+    }
+
+    function renderDangerDeleteTargets() {
+      const select = document.getElementById('dev-delete-target');
+      if (!select) return;
+      const deletable = allDevicesList.filter(d => !d.is_lending);
+      if (deletable.length === 0) {
+        select.innerHTML = '<option value="">削除可能な端末がありません</option>';
+        return;
+      }
+      select.innerHTML = '<option value="">削除対象を選択</option>' + deletable
+        .map(d => `<option value="${d.id}" data-code="${d.no || d.device_id_code || '-'}">No ${d.no || '-'} / ${d.device_id_code || '-'} / ${d.status === 'retired' ? '廃却' : (d.status === 'broken' ? '故障中' : '空き')}</option>`)
+        .join('');
+    }
+
+    function toggleDangerDeleteButton() {
+      const btn = document.getElementById('dev-delete-btn');
+      const select = document.getElementById('dev-delete-target');
+      const confirmInput = document.getElementById('dev-delete-confirm');
+      if (!btn || !select || !confirmInput) return;
+      btn.disabled = !(select.value && confirmInput.value.trim().toUpperCase() === 'DELETE');
+    }
+
+    async function handleDangerDelete() {
+      const select = document.getElementById('dev-delete-target');
+      const confirmInput = document.getElementById('dev-delete-confirm');
+      if (!select || !confirmInput) return;
+      const id = parseInt(select.value);
+      if (!id) { showToast('削除対象を選択してください', true); return; }
+      if (confirmInput.value.trim().toUpperCase() !== 'DELETE') { showToast('確認入力に DELETE を入力してください', true); return; }
+      const code = select.options[select.selectedIndex]?.dataset?.code || `ID:${id}`;
+      await deleteDevice(id, code, true);
+      confirmInput.value = '';
+      toggleDangerDeleteButton();
+    }
+
+    async function setDeviceStatus(id, status, code) {
+      const statusLabel = status === 'active' ? '復帰' : (status === 'retired' ? '廃却' : '故障中');
+      if (!confirm(` 「${code}」を${statusLabel}に変更しますか？`)) return;
+      try {
+        await apiFetch(`/devices/${id}/status`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status })
+        });
+        showToast(`${code} のステータスを更新しました`);
+        await loadDevices();
+      } catch (e) { showToast(e.message, true); }
+    }
+
+    async function addDevice() {
+      const no = document.getElementById('dev-no')?.value.trim();
+      const idcode = document.getElementById('dev-idcode')?.value.trim();
+      const memo = document.getElementById('dev-memo')?.value.trim();
+      if (!no) { showToast('Noを入力してください', true); return; }
+      const btn = document.getElementById('dev-add-btn');
+      btn.disabled = true;
+      try {
+        await apiFetch('/devices', { method: 'POST', body: JSON.stringify({ no: no || null, device_id_code: idcode || null, memo: memo || null }) });
+        showToast(`No ${no} を追加しました`);
+        ['dev-no', 'dev-idcode', 'dev-memo'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+        await loadDevices();
+      } catch (e) { showToast(e.message, true); }
+      btn.disabled = false;
+    }
+
+    async function deleteDevice(id, code, skipConfirm = false) {
+      if (!skipConfirm && !confirm(`「${code}」を削除しますか？\n（論理削除のため貸出履歴は残ります）`)) return;
+      try {
+        await apiFetch(`/devices/${id}`, { method: 'DELETE' });
+        showToast(`${code} を削除しました`);
+        await loadDevices();
+      } catch (e) { showToast(e.message, true); }
+    }
+
+    showTab('management');
+  </script>
 </body>
+
 </html>
