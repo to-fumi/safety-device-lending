@@ -5,10 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>安全端末管理</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
-    /* @import url('fonts/google-fonts.css'); */
-
     :root {
       --bg: #0e0f11;
       --surface: #16181c;
@@ -1674,8 +1671,7 @@
 
   <div class="toast" id="toast"></div>
 
-  <!-- <script src="libs/zxing-browser.min.js"></script> -->
-  <script src="https://unpkg.com/@zxing/browser@0.1.5/umd/zxing-browser.min.js"></script>
+  <script src="/static/libs/zxing-browser.min.js"></script>
   <script>
     const API = '';
     let filterStatus = 'all', filterQuery = '', filterEventType = 'all';
@@ -1763,7 +1759,7 @@
       const smartphoneStockCount = activeDevices.filter(d => !smartphoneOutDeviceIds.has(d.id)).length;
       const availableDevices = devices.filter(d => !d.is_lending && d.status === 'active');
       const today = new Date().toISOString().slice(0, 10);
-      const todayCount= allLoans.filter(
+      const todayCount = allLoans.filter(
         l => (l.lent_at || '').startsWith(today) || (l.smartphone_relent_at || '').startsWith(today)
       ).length;
 
@@ -2324,14 +2320,14 @@
 
         const panel = document.getElementById('dash-panel');
         panel.innerHTML = `<div class="panel-header"><div class="panel-title">現在の貸出状況</div></div><div class="table-wrap">${lendingLoans.length === 0 ? '<div class="empty">現在貸出中の端末はありません</div>'
-            : `<table><thead><tr><th>No</th><th>ID</th><th>ステータス</th><th>従業員コード</th><th>貸出日時</th></tr></thead><tbody>${lendingLoans.map(l => `<tr>
+          : `<table><thead><tr><th>No</th><th>ID</th><th>ステータス</th><th>従業員コード</th><th>貸出日時</th></tr></thead><tbody>${lendingLoans.map(l => `<tr>
           <td style="font-family:var(--mono);font-size:12px;color:var(--text)">${l.device.no || '-'}</td>
           <td><span class="device-id">${l.device.device_id_code}</span></td>
           <td><span class="status-pill ${loanStatusClass(l)}">${loanStatusText(l)}</span></td>
           <td style="font-family:var(--mono);font-size:11px;color:var(--text-muted)">${l.user_employee_id || '-'}</td>
           <td class="time-cell">${fmt(l.lent_at)}</td>
         </tr>`).join('')
-            }</tbody></table>`
+          }</tbody></table>`
           }</div>`;
 
         const brokenPanel = document.getElementById('dash-broken-panel');
