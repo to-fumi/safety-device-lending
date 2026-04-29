@@ -23,7 +23,7 @@ def _get_loan_or_404(loan_id: int, db: Session) -> Loan:
     loan = db.query(Loan).options(*_LOAN_OPTS).filter(Loan.id == loan_id).first()
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
-    return Loan
+    return loan
 
 
 @router.post("", response_model=LoanOut, status_code=201)

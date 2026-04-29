@@ -52,7 +52,7 @@ class LoanCreate(BaseModel):
     
 
 class SmartphoneLendRequest(BaseModel):
-    load_id: int
+    loan_id: int
     user_employee_id: str
     dock_no_confirmed: bool = False
     test_course_rule_confirmed: bool = False
