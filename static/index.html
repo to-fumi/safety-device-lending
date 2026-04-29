@@ -5,8 +5,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>安全端末管理</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
-    @import url('fonts/google-fonts.css');
+    /* @import url('fonts/google-fonts.css'); */
 
     :root {
       --bg: #0e0f11;
@@ -23,7 +24,7 @@
       --danger-dim: rgba(248, 113, 113, 0.12);
       --text: #e8eaf0;
       --text-muted: #6b7280;
-      --text-dim: 39ca3af;
+      --text-dim: #9ca3af;
       --mono: 'DM Mono', monospace;
       --sans: 'Noto Sans JP', sans-serif;
       --radius: 10px;
@@ -506,7 +507,7 @@
     }
 
     .device-detected.found {
-      color: var(--accept);
+      color: var(--accent);
       border-color: rgba(74, 222, 128, .4);
       background: var(--accent-dim);
     }
@@ -543,7 +544,7 @@
 
     .btn-camera:disabled {
       opacity: .4;
-      cursor: not-allowd;
+      cursor: not-allowed;
       pointer-events: none;
     }
 
@@ -640,7 +641,7 @@
     .ret-type-btn:active {
       background: var(--accent-dim);
       color: var(--accent);
-      border-color: rgba(74, 222, 128, 35);
+      border-color: rgba(74, 222, 128, .35);
     }
 
     .ret-type-btn:disabled {
@@ -728,7 +729,7 @@
     }
 
     tbody tr:hover td {
-      background: var(---accent-dim2);
+      background: var(--accent-dim2);
     }
 
     tbody tr:last-child td {
@@ -1143,7 +1144,7 @@
     }
 
     .part-badge.out {
-      background: var(--warn--dim);
+      background: var(--warn-dim);
       color: var(--warn);
       border: 1px solid rgba(251, 146, 60, .35);
     }
@@ -1673,7 +1674,8 @@
 
   <div class="toast" id="toast"></div>
 
-  <script src="libs/zxing-browser.min.js"></script>
+  <!-- <script src="libs/zxing-browser.min.js"></script> -->
+  <script src="https://unpkg.com/@zxing/browser@0.1.5/umd/zxing-browser.min.js"></script>
   <script>
     const API = '';
     let filterStatus = 'all', filterQuery = '', filterEventType = 'all';
@@ -1710,7 +1712,7 @@
 
     function applyReturnSelection(type) {
       const hidden = document.getElementById('ret-loan-val');
-      const detectedEl = document.getElementLById('ret-detected');
+      const detectedEl = document.getElementById('ret-detected');
       if (!hidden || !detectedEl) return;
 
       const selectedId = returnSelectionsByType[type];
@@ -1746,7 +1748,7 @@
       return returnScanCandidates;
     }
 
-    function updateManagementStats(devices, alloLoans) {
+    function updateManagementStats(devices, allLoans) {
       const statsRoot = document.getElementById('mgmt-stats');
       if (!statsRoot) return;
 
@@ -1754,14 +1756,14 @@
       const nonLendableDeviceIds = new Set(devices.filter(d => d.status !== 'active').map(d => d.id));
 
       const lendingLoans = allLoans.filter(isLoanActive);
-      const lendingLoanActive = lendingLoans.filter(l => !nonLendableDeviceIds.has(l.device_id));
+      const lendingLoansActive = lendingLoans.filter(l => !nonLendableDeviceIds.has(l.device_id));
       const smartphoneOutDeviceIds = new Set(
         lendingLoansActive.filter(isPhoneOut).map(l => l.device_id)
       );
       const smartphoneStockCount = activeDevices.filter(d => !smartphoneOutDeviceIds.has(d.id)).length;
       const availableDevices = devices.filter(d => !d.is_lending && d.status === 'active');
       const today = new Date().toISOString().slice(0, 10);
-      const todayCoutn = allLoans.filter(
+      const todayCount= allLoans.filter(
         l => (l.lent_at || '').startsWith(today) || (l.smartphone_relent_at || '').startsWith(today)
       ).length;
 
@@ -1806,6 +1808,16 @@
 
       window.mgmtAllLoans = allLoans;
       window.mgmtAllDevices = devices;
+    }
+
+    async function refreshManagementStats() {
+      const statsRoot = document.getElementById('mgmt-stats');
+      if (!statsRoot) return;
+      const [devices, allLoans] = await Promise.all([
+        apiFetch('/devices'),
+        apiFetch('loans?limit=500')
+      ]);
+      updateManagementStats(devices, allLoans);
     }
 
     async function openCamera(targetId) {
@@ -1854,7 +1866,7 @@
         video.srcObject = cameraStream;
         await video.play().catch(() => { });
 
-        codeReader = new ZxingBrowserMultiFormatReader();
+        codeReader = new ZXingBrowser.BrowserMultiFormatReader();
         statusEl.textContent = 'コードをカメラに向けてください';
         dot.className = 'cam-dot active';
         scanning = true;
@@ -1950,7 +1962,7 @@
             if (guideEl) guideEl.style.color = '';
             updateManagementGuide();
           }
-        } else if (cameraTargetid === 'sp-lend') {
+        } else if (cameraTargetId === 'sp-lend') {
           updateSpLendBtn();
           setTimeout(() => closeCamera(), 900);
         } else if (cameraTargetId === 'ret') {
@@ -2148,7 +2160,7 @@
       cameraTargetId = null;
     }
 
-    window.addEventListener('keydown', e => { if (e.key === 'Escase') closeCamera(); });
+    window.addEventListener('keydown', e => { if (e.key === 'Escape') closeCamera(); });
 
     async function apiFetch(path, options = {}) {
       const res = await fetch(API + path, { headers: { 'Content-Type': 'application/json' }, ...options });
@@ -2189,7 +2201,7 @@
     function loanStatusText(loan) {
       if (!isLoanActive(loan)) return '返却済み';
       if (isPhoneOut(loan) && (isDockOut(loan) || isCableOut(loan))) return '端末+台座貸出中';
-      if (!isPhontOut(loan) && (isDockOut(loan) || isCableOut(loan))) return '台座のみ貸出中';
+      if (!isPhoneOut(loan) && (isDockOut(loan) || isCableOut(loan))) return '台座のみ貸出中';
       if (isPhoneOut(loan) && !isDockOut(loan) && !isCableOut(loan)) return 'スマホのみ貸出中';
       return '貸出中';
     }
@@ -2243,7 +2255,7 @@
       }
     }
 
-    function closeAdminMenuAdnAuth() {
+    function closeAdminMenuAndAuth() {
       document.getElementById('admin-menu').classList.remove('open');
       document.getElementById('admin-overlay').classList.remove('open');
     }
@@ -2296,7 +2308,7 @@
     }
 
     async function renderDashboard(el) {
-      el.innerHTML = `<div class="page-header"><div><div class="page-title>ダッシュボード</div><div class="page-sub" id="dash-sub">読み込み中...</div></div></div>
+      el.innerHTML = `<div class="page-header"><div><div class="page-title">ダッシュボード</div><div class="page-sub" id="dash-sub">読み込み中...</div></div></div>
   <div class="panel" id="dash-panel"><div class="panel-header"><div class="panel-title">現在の貸出状況</div></div><div class="empty">読み込み中...</div></div>
   <div class="panel" id="dash-broken-panel"><div class="panel-header"><div class="panel-title">故障・廃却端末</div></div><div class="empty">読み込み中...</div></div>`;
 
@@ -2353,7 +2365,7 @@
       try {
         await apiFetch(`/devices/${deviceId}/status`, {
           method: 'PATCH',
-          body: JSON.strignify({ status: 'active' })
+          body: JSON.stringify({ status: 'active' })
         });
         showToast('端末を故障復帰しました');
         const el = document.querySelector('.main-content');
@@ -2389,7 +2401,7 @@
   <div class="mgmt-container">
     <div class="mgmt-lend-container">
       <div class="mgmt-new-lend-form" id="mgmt-new-lend-form" style="display:none;">
-        <div class="panel-header>
+        <div class="panel-header">
           <div class="panel-title">貸出処理</div>
           <span class="sep"></span>
           <div style="display:flex;align-items:center;gap:6px;">
@@ -2421,14 +2433,14 @@
               <span>テストコースルールを遵守します</span>
             </label>
             <div>
-              <button class="btn-primary" id="lend-btn" onclick="submitLengMgtm()" disabled>端末一式貸出登録</button>
+              <button class="btn-primary" id="lend-btn" onclick="submitLendMgmt()" disabled>端末一式貸出登録</button>
             </div>
           </div>
         </div>
         <div id="lend-sp-area" style="display:none;">
           <div class="form-grid cols-2">
             <div class="field">
-              <label>端末（台座/コード貸出中）</lable>
+              <label>端末（台座/コード貸出中）</label>
               <div class="device-scan-field">
                 <div id="sp-lend-detected" class="device-detected">未検出</div>
               </div>
@@ -2504,7 +2516,7 @@
       const ruleConfirmed = !!document.getElementById('lend-rule-confirm')?.checked;
 
       if (!rawCode) {
-        guideEl.textContent = '従業員コードーを入力してください。';
+        guideEl.textContent = '従業員コードを入力してください。';
         if (codeHelpEl) {
           codeHelpEl.textContent = '7桁の従業員コードを入力してください';
           codeHelpEl.className = 'field-help';
@@ -2544,7 +2556,7 @@
       isBrokenDeviceDetected = false;
 
       const lendDetected = document.getElementById('lend-detected');
-      const lendDeviceCal = document.getElementById('lend-device-val');
+      const lendDeviceVal = document.getElementById('lend-device-val');
       if (lendDetected) {
         lendDetected.textContent = '未検出';
         lendDetected.className = 'device-detected';
@@ -2756,11 +2768,11 @@
         <label>返却状態</label>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:42px;">
           <div style="display:flex;align-items:center;gap:16px;">
-            <label for="ret-issue-normal" style="display:flex;align-items:center;gap:8px;margin:0;font-size:15px;color:var(--text-dim);font-family:var(--sams);text-transform:none;letter-spacing:0;cursor:pointer;">
+            <label for="ret-issue-normal" style="display:flex;align-items:center;gap:8px;margin:0;font-size:15px;color:var(--text-dim);font-family:var(--sans);text-transform:none;letter-spacing:0;cursor:pointer;">
               <input type="radio" name="ret-issue-status" id="ret-issue-normal" value="normal" checked onchange="toggleReturnIssueNote()" style="width:16px;height:16px;accent-color:var(--accent);">
               <span>異常なし</span>
             </label>
-            <label for="ret-issue-abnormal" style="display:flex;align-items:center;gap:8px;margin:0;font-size:15px;color:var(--text-dim);font-family:var(--sams);text-transform:none;letter-spacing:0;cursor:pointer;">
+            <label for="ret-issue-abnormal" style="display:flex;align-items:center;gap:8px;margin:0;font-size:15px;color:var(--text-dim);font-family:var(--sans);text-transform:none;letter-spacing:0;cursor:pointer;">
               <input type="radio" name="ret-issue-status" id="ret-issue-abnormal" value="abnormal" onchange="toggleReturnIssueNote()" style="width:16px;height:16px;accent-color:var(--accent);">
               <span>異常あり</span>
             </label>
@@ -2806,7 +2818,7 @@
       const hideForSmartphoneIssue = hasIssue && returnType === 'smartphone_only';
 
       if (noteWrap) {
-        noteWrap.style.display = hasIssue && !hideForSmartphoneIssue ? '' : 'note';
+        noteWrap.style.display = hasIssue && !hideForSmartphoneIssue ? '' : 'none';
       }
       if (noteInput && (!hasIssue || hideForSmartphoneIssue)) {
         noteInput.value = '';
@@ -2867,6 +2879,12 @@
 
       const hasCode = validateEmployeeCode(normalizeEmployeeCode(currentEmployeeCode || ''));
       if (!hasCode) {
+        btn.disabled = true;
+        return;
+      }
+
+      const loanId = parseInt(document.getElementById('ret-loan-val')?.value);
+      if (!loanId) {
         btn.disabled = true;
         return;
       }
@@ -2976,7 +2994,7 @@
         btnFullSet.disabled = !hasFullSet;
 
         const selectedBtn = userSelectedType === 'full_set' ? btnFullSet
-          : userSelected === 'smartphone_only' ? btnSmartphone
+          : userSelectedType === 'smartphone_only' ? btnSmartphone
             : btnDockCable;
         const effectiveType = selectedBtn.disabled
           ? (hasFullSet ? 'full_set' : (hasSmartphoneOut ? 'smartphone_only' : 'dock_and_cable_only'))
@@ -3350,7 +3368,7 @@
             note: note || null
           })
         });
-        if (loans.cable_weight_ok === false) {
+        if (loan.cable_weight_ok === false) {
           showToast(`${loan.device.device_id_code} を返却。コード重量確認が未チェックです`, true);
         } else {
           showToast(`${loan.device.device_id_code} の返却を記録しました`);
@@ -3393,7 +3411,7 @@
   <div class="panel"><div class="panel-header"><div class="panel-title">履歴</div><div class="sep"></div>
   <div class="filter-bar">
     <input class="filter-input" type="text" placeholder="従業員コード..." id="log-q" value="${filterQuery}" oninput="filterQuery=this.value;loadLogs()">
-    <select class="filter-select" onchange="filterStatus"=this.value;loadLogs()">
+    <select class="filter-select" onchange="filterStatus=this.value;loadLogs()">
       <option value="all" ${filterStatus === 'all' ? 'selected' : ''}>すべて</option>
       <option value="lending" ${filterStatus === 'lending' ? 'selected' : ''}>貸出中</option>
       <option value="returned" ${filterStatus === 'returned' ? 'selected' : ''}>返却済み</option>
@@ -3696,7 +3714,7 @@
       <button class="btn-danger" id="dev-delete-btn" onclick="handleDangerDelete()" disabled>削除実行</button>
     </div>
   </div>`;
-      await loanDevices();
+      await loadDevices();
     }
 
     let allDevicesList = [];

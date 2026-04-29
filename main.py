@@ -45,7 +45,7 @@ def ensure_loan_schema() -> None:
             UPDATE loans
             SET is_smartphone_out = 0,
                 is_dock_out = 0,
-                is_cable_out = 0,
+                is_cable_out = 0
             WHERE returned_at IS NOT NULL
             """
         )
